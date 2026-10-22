@@ -1,0 +1,222 @@
+{
+    "uretildi": "hub App\\Support\\Scrubber, 2026-10-22",
+    "text_sinir": {
+        "msg": 500,
+        "stack": 2000
+    },
+    "path_sinir": 300,
+    "text": [
+        {
+            "aciklama": "e-posta",
+            "girdi": "Kullanıcı ahmet@ornek.com bulunamadı",
+            "beklenen": "Kullanıcı [email] bulunamadı"
+        },
+        {
+            "aciklama": "Türkçe karakterli e-posta",
+            "girdi": "Sipariş sahibi ayşe.yılmaz@örnek.com.tr",
+            "beklenen": "Sipariş sahibi [email]"
+        },
+        {
+            "aciklama": "TC kimlik no",
+            "girdi": "TCKN 12345678901 geçersiz",
+            "beklenen": "TCKN [national_id] geçersiz"
+        },
+        {
+            "aciklama": "IBAN bitişik",
+            "girdi": "TR330006100519786457841326 reddedildi",
+            "beklenen": "[iban] reddedildi"
+        },
+        {
+            "aciklama": "IBAN boşluklu",
+            "girdi": "IBAN TR33 0006 1005 1978 6457 8413 26 hatalı",
+            "beklenen": "IBAN [iban] hatalı"
+        },
+        {
+            "aciklama": "kart boşluklu",
+            "girdi": "4111 1111 1111 1111 hatalı",
+            "beklenen": "[card] hatalı"
+        },
+        {
+            "aciklama": "kart tireli",
+            "girdi": "kart 4111-1111-1111-1111 red",
+            "beklenen": "kart [card] red"
+        },
+        {
+            "aciklama": "telefon 0 ile",
+            "girdi": "Ara: 0555 123 45 67",
+            "beklenen": "Ara: [phone]"
+        },
+        {
+            "aciklama": "telefon +90 ile",
+            "girdi": "Ara: +90 555 123 45 67",
+            "beklenen": "Ara: [phone]"
+        },
+        {
+            "aciklama": "telefon bitişik",
+            "girdi": "numara 5551234567 kayıtlı değil",
+            "beklenen": "numara[phone] kayıtlı değil"
+        },
+        {
+            "aciklama": "uzun jeton",
+            "girdi": "Bearer eyJhbGciOiJIUzI1NiJ9abcdefghijklmn",
+            "beklenen": "Bearer [token]"
+        },
+        {
+            "aciklama": "SQL içinde oturum kimliği",
+            "girdi": "select * from sessions where id = ItLsnnji2VLJtiE1SjiyAEdzv6aZiuVqhFvcmRu1",
+            "beklenen": "select * from sessions where id = [token]"
+        },
+        {
+            "aciklama": "kişisel veri yok — değişmez",
+            "girdi": "Null check operator used on a null value",
+            "beklenen": "Null check operator used on a null value"
+        },
+        {
+            "aciklama": "kısa sayı — değişmez",
+            "girdi": "sipariş 12345 bulunamadı",
+            "beklenen": "sipariş 12345 bulunamadı"
+        },
+        {
+            "aciklama": "tarih — değişmez",
+            "girdi": "2026-09-17 14:05 zaman aşımı",
+            "beklenen": "2026-09-17 14:05 zaman aşımı"
+        },
+        {
+            "aciklama": "500 karakterde kesilir",
+            "girdi": "a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b ",
+            "beklenen": "a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b a b "
+        },
+        {
+            "aciklama": "zaman damgası — kart değil",
+            "girdi": "saat 1726571234567 geçti",
+            "beklenen": "saat 1726571234567 geçti"
+        },
+        {
+            "aciklama": "Luhn'u tutan zaman damgası — kart değil (ilk hane 1)",
+            "girdi": "saat 1726571234573 geçti",
+            "beklenen": "saat 1726571234573 geçti"
+        },
+        {
+            "aciklama": "Luhn'u tutmayan 16 hane — kart değil",
+            "girdi": "no 4111111111111112",
+            "beklenen": "no 4111111111111112"
+        },
+        {
+            "aciklama": "kart bitişik (Luhn geçerli)",
+            "girdi": "kart 4111111111111111 red",
+            "beklenen": "kart [card] red"
+        },
+        {
+            "aciklama": "Amex 15 hane",
+            "girdi": "378282246310005 red",
+            "beklenen": "[card] red"
+        },
+        {
+            "aciklama": "UUID jeton",
+            "girdi": "x 3f2a1b4c-5d6e-4f70-8a9b-0c1d2e3f4a5b y",
+            "beklenen": "x [token] y"
+        },
+        {
+            "aciklama": "önekli anahtar",
+            "girdi": "x ghp_16C7e42F292c6912E7710c838347Ae178B4a y",
+            "beklenen": "x [token] y"
+        },
+        {
+            "aciklama": "tireli hex jeton",
+            "girdi": "x a1b2c3d4-e5f6a7b8-c9d0e1f2-a3b4c5d6 y",
+            "beklenen": "x [token] y"
+        },
+        {
+            "aciklama": "tireli okunur ad — jeton değil",
+            "girdi": "görsel kampanya-gorseli-yaz-indirimi-1726571234567-752066249.jpeg yok",
+            "beklenen": "görsel kampanya-gorseli-yaz-indirimi-1726571234567-752066249.jpeg yok"
+        },
+        {
+            "aciklama": "önünde rakam olan telefon benzeri — değişmez",
+            "girdi": "damga 1795123456789 geçti",
+            "beklenen": "damga 1795123456789 geçti"
+        },
+        {
+            "aciklama": "telefon 90 ön eki bitişik",
+            "girdi": "tel 905321234567",
+            "beklenen": "tel [phone]"
+        },
+        {
+            "aciklama": "telefon 90 ön eki boşluklu",
+            "girdi": "tel 90 532 123 45 67",
+            "beklenen": "tel [phone]"
+        },
+        {
+            "aciklama": "CamelCase istisna adı — değişmez",
+            "girdi": "System.InvalidOperationException: boom",
+            "beklenen": "System.InvalidOperationException: boom"
+        },
+        {
+            "aciklama": "yalın CamelCase ad — değişmez",
+            "girdi": "InvalidOperationException",
+            "beklenen": "InvalidOperationException"
+        },
+        {
+            "aciklama": "yığın izindeki uzun CamelCase metot adı — değişmez",
+            "girdi": "at Foo.HandleNonSuccessAndDebuggerNotification(Task task)",
+            "beklenen": "at Foo.HandleNonSuccessAndDebuggerNotification(Task task)"
+        },
+        {
+            "aciklama": "rakamlı karışık harfli jeton",
+            "girdi": "x aB3dE5fG7hJ9kL1mN3pQ5rS7 y",
+            "beklenen": "x [token] y"
+        },
+        {
+            "aciklama": "tümü büyük harf 24+ dizi",
+            "girdi": "x ABCDEFGHIJKLMNOPQRSTUVWXYZ y",
+            "beklenen": "x [token] y"
+        },
+        {
+            "aciklama": "24 haneli hex jeton",
+            "girdi": "x 5d41402abc4b2a76b9719d91 y",
+            "beklenen": "x [token] y"
+        },
+        {
+            "aciklama": "rakamsız ama yan yana büyük harfli dizi",
+            "girdi": "x abcDEfghIJklmnOPqrsTUvwxYZab y",
+            "beklenen": "x [token] y"
+        }
+    ],
+    "path": [
+        {
+            "aciklama": "query string atılır",
+            "girdi": "/urunler?email=x@y.com&token=abc",
+            "beklenen": "/urunler"
+        },
+        {
+            "aciklama": "tam URL → yol",
+            "girdi": "https://api.ornek.com/urunler?q=1",
+            "beklenen": "/urunler"
+        },
+        {
+            "aciklama": "fragment atılır",
+            "girdi": "/ara#sonuc",
+            "beklenen": "/ara"
+        },
+        {
+            "aciklama": "yoldaki e-posta maskelenir",
+            "girdi": "/kullanici/ahmet@ornek.com/profil",
+            "beklenen": "/kullanici/[email]/profil"
+        },
+        {
+            "aciklama": "yükleme dosya adı okunur kalır",
+            "girdi": "/uploads/discount/kampanya-gorseli-yaz-indirimi-1726571234567-752066249.jpeg",
+            "beklenen": "/uploads/discount/kampanya-gorseli-yaz-indirimi-1726571234567-752066249.jpeg"
+        },
+        {
+            "aciklama": "çift damgalı dosya adı",
+            "girdi": "/uploads/sliders/slider-slider-1726571234567-249230604-1726571239999-875783343.png",
+            "beklenen": "/uploads/sliders/slider-slider-1726571234567-249230604-1726571239999-875783343.png"
+        },
+        {
+            "aciklama": "telefon benzeri damga",
+            "girdi": "/uploads/products/urun-1795123456789-123456789.png",
+            "beklenen": "/uploads/products/urun-1795123456789-123456789.png"
+        }
+    ]
+}

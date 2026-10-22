@@ -1,0 +1,24 @@
+# Derleme çıktıları
+bin/
+obj/
+artifacts/
+*.nupkg
+*.snupkg
+
+# Test sonuçları
+TestResults/
+*.trx
+coverage*/
+
+# IDE
+.vs/
+.vscode/
+.idea/
+*.user
+*.suo
+*.DotSettings.user
+
+# Yerel yapılandırma — secret asla depoya girmez
+.env
+.env.*
+appsettings.*.local.json

@@ -1,0 +1,59 @@
+# Test + NuGet yayını — trusted publishing (OIDC), kalıcı API anahtarı yok.
+#
+# Her push ve PR'da testler desteklenen iki çerçevede (net8.0, net10.0) koşar.
+# `v*` etiketi gönderildiğinde testler geçerse paket derlenir ve NuGet'e yüklenir.
+# Yükleme `nuget` ortamında koşar; GitHub'da bu ortama onay kuralı eklenirse yayın
+# elle onaylanmadan çıkmaz.
+#
+# NuGet tarafında bir kez: nuget.org → Trusted Publishing → bu depo + bu iş akışı
+# dosyası (publish.yml) + ortam `nuget` için ilke ekleyin.
+name: publish
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+
+jobs:
+  test:
+    # 24.04 sabit: net8.0 sözü yalnızca .NET 8 çalışma zamanında koşan testle tutulabilir.
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            8.0.x
+            10.0.x
+      - run: dotnet test -c Release
+
+  publish:
+    needs: test
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-24.04
+    environment: nuget
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            8.0.x
+            10.0.x
+      # Etiket ile paket sürümü ayrışırsa yayın durur: v0.1.1 etiketi 0.1.0 içeren
+      # bir paketi yüklememeli.
+      - name: Etiket ve sürüm eşleşiyor mu
+        run: |
+          version=$(sed -n 's:.*<Version>\(.*\)</Version>.*:\1:p' src/VitalWatch.AspNetCore/VitalWatch.AspNetCore.csproj | head -n 1)
+          test "v$version" = "$GITHUB_REF_NAME" || { echo "Etiket $GITHUB_REF_NAME, paket $version"; exit 1; }
+      - run: dotnet pack src/VitalWatch.AspNetCore/VitalWatch.AspNetCore.csproj -c Release -o artifacts
+      # OIDC → kısa ömürlü API anahtarı.
+      - name: NuGet girişi
+        uses: NuGet/login@v1
+        id: login
+        with:
+          user: CestnyTR
+      - run: dotnet nuget push artifacts/*.nupkg --api-key ${{ steps.login.outputs.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json
