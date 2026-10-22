@@ -6,40 +6,45 @@ using VitalWatch.Internal;
 namespace VitalWatch;
 
 /// <summary>
-/// Kurulum teşhisi: <c>dotnet run -- --vitalwatch-status</c>.
+/// Installation diagnostics: <c>dotnet run -- --vitalwatch-status</c>.
 /// </summary>
 /// <remarks>
-/// <para>Paketin en pahalı arıza biçimi için var: <b>sessiz çalışmama.</b> Yapılandırma eksikken
-/// ya da secret yanlışken hiçbir şey patlamaz — hub geçersiz isteğe de 204 döner.</para>
-/// <para><b>Neden ayrı bir araç değil de uygulamanın kendisi.</b> Node ve Python paketleri
-/// <c>vitalwatch-status</c> komutu taşıyor; .NET'te karşılığı ayrı bir <c>dotnet tool</c>
-/// olurdu. O araç uygulamanın gördüğü yapılandırmayı göremez: <c>appsettings.{Ortam}.json</c>,
-/// user-secrets, Key Vault, koddan verilen <c>AddVitalWatch(o =&gt; ...)</c> ayarları ancak
-/// uygulamanın kendi host'unda birleşir. Node paketinde tam da bu yaşandı — <c>.env</c> doğru
-/// doldurulmuşken teşhis komutu "TANIMSIZ" dedi. Teşhis aracının yanlış teşhis koyması, hiç
-/// teşhis koymamaktan kötüdür. Bu yüzden komut, uygulamanın kurulmuş host'u üzerinde çalışır.</para>
-/// <para><b>Neden uç nokta değil.</b> <c>MapVitalWatchStatus()</c> gibi bir HTTP ucu
-/// yapılandırmayı (anahtar, secret uzunluğu, sürüm) internete açardı.</para>
+/// <para>Exists for the package's most expensive failure mode: <b>silently not working.</b>
+/// Nothing breaks when the configuration is incomplete or the secret is wrong — the hub
+/// returns 204 even for an invalid request.</para>
+/// <para><b>Why the application itself and not a separate tool.</b> The Node and Python
+/// packages ship a <c>vitalwatch-status</c> command; in .NET the equivalent would be a separate
+/// <c>dotnet tool</c>. Such a tool cannot see the configuration the application sees:
+/// <c>appsettings.{Environment}.json</c>, user-secrets, Key Vault and settings passed in code via
+/// <c>AddVitalWatch(o =&gt; ...)</c> only come together in the application's own host. A
+/// diagnostic tool that gives the wrong diagnosis is worse than none, so the command runs on the
+/// application's built host.</para>
+/// <para><b>Why not an endpoint.</b> An HTTP endpoint such as <c>MapVitalWatchStatus()</c>
+/// would expose the configuration (key, secret length, version) to the internet.</para>
 /// </remarks>
 public static class VitalWatchStatusExtensions
 {
-    /// <summary>Komut satırı bayrağı.</summary>
+    /// <summary>The command-line flag.</summary>
     public const string Flag = "--vitalwatch-status";
 
     private const string NuGetIndex = "https://api.nuget.org/v3-flatcontainer/vitalwatch.aspnetcore/index.json";
 
     /// <summary>
-    /// <paramref name="args"/> <c>--vitalwatch-status</c> içeriyorsa teşhisi yazdırır, çıkış
-    /// kodunu <see cref="Environment.ExitCode"/>'a koyar ve <c>true</c> döner; uygulama
-    /// başlatılmadan çıkılmalıdır. İçermiyorsa hiçbir şey yapmaz ve <c>false</c> döner.
+    /// If <paramref name="args"/> contains <c>--vitalwatch-status</c>, prints the diagnostics,
+    /// sets <see cref="Environment.ExitCode"/> and returns <c>true</c>; the caller should then exit
+    /// without starting the application. Otherwise does nothing and returns <c>false</c>.
     /// </summary>
+    /// <param name="host">The built application host.</param>
+    /// <param name="args">Command-line arguments.</param>
+    /// <param name="output">Where to write the report; defaults to <see cref="Console.Out"/>.</param>
+    /// <returns><c>true</c> if the diagnostics ran and the application should exit.</returns>
     /// <example>
     /// <code>
     /// var app = builder.Build();
     /// if (await app.RunVitalWatchStatusAsync(args)) return;
     /// </code>
-    /// Ek bayraklar: <c>--test</c> gerçek bir sınama istisnası gönderir; <c>--vitalwatch</c>
-    /// panele hata düşürmeden yalnızca canlılık isteği gönderir.
+    /// Extra flags: <c>--test</c> sends a real test exception; <c>--vitalwatch</c> sends only a
+    /// liveness request, without creating an error in the panel.
     /// </example>
     public static async Task<bool> RunVitalWatchStatusAsync(this IHost host, string[] args, TextWriter? output = null)
     {
@@ -67,17 +72,17 @@ public static class VitalWatchStatusExtensions
         {
             var disabled = services.GetService<IVitalWatch>() is DisabledVitalWatch;
 
-            Line("SDK sürümü", SdkInfo.Version);
+            Line("SDK version", SdkInfo.Version);
             output.WriteLine();
             output.WriteLine(disabled
-                ? "  ✗ VITALWATCH_ENABLED=false — hiçbir veri gönderilmez."
-                : "  ✗ AddVitalWatch() çağrılmamış: builder.Services.AddVitalWatch();");
+                ? "  ✗ VITALWATCH_ENABLED=false — no data is sent."
+                : "  ✗ AddVitalWatch() was not called: builder.Services.AddVitalWatch();");
             output.WriteLine();
 
             return 1;
         }
 
-        Line("SDK sürümü", SdkInfo.Version);
+        Line("SDK version", SdkInfo.Version);
 
         /*
          * Güncelleme denetimi yalnızca burada, izlenen uygulamanın çalışma yolunda değil.
@@ -87,22 +92,22 @@ public static class VitalWatchStatusExtensions
         if (!IsTrue(Environment.GetEnvironmentVariable("VITALWATCH_STATUS_OFFLINE")))
         {
             var latest = await LatestVersionAsync().ConfigureAwait(false);
-            Line("Güncel sürüm", latest ?? "denetlenemedi");
+            Line("Latest version", latest ?? "could not check");
 
             if (latest is not null && IsNewer(latest, SdkInfo.Version))
             {
-                output.WriteLine("  ! Güncelleme var: dotnet add package VitalWatch.AspNetCore");
+                output.WriteLine("  ! Update available: dotnet add package VitalWatch.AspNetCore");
             }
         }
 
-        Line("Etkin", settings.Enabled ? "evet" : "HAYIR (VITALWATCH_ENABLED=false)");
-        Line("Hub adresi", settings.Url ?? "TANIMSIZ");
-        Line("Proje anahtarı", settings.Key ?? "TANIMSIZ");
-        Line("Secret uzunluğu", settings.Secret is null ? "TANIMSIZ" : $"{settings.Secret.Length} karakter");
+        Line("Enabled", settings.Enabled ? "yes" : "NO (VITALWATCH_ENABLED=false)");
+        Line("Hub URL", settings.Url ?? "not set");
+        Line("Project key", settings.Key ?? "not set");
+        Line("Secret length", settings.Secret is null ? "not set" : $"{settings.Secret.Length} characters");
         Line("Environment", settings.Env == settings.EnvRaw ? settings.Env : $"{settings.Env} ({settings.EnvRaw})");
-        Line("Sürüm etiketi", settings.Release is null
-            ? "tanımsız (kaynak: yok)"
-            : $"{settings.Release} (kaynak: {settings.ReleaseSource})");
+        Line("Release tag", settings.Release is null
+            ? "not set (source: none)"
+            : $"{settings.Release} (source: {settings.ReleaseSource})");
         Line(".NET", SdkInfo.RuntimeVersion);
         output.WriteLine();
 
@@ -120,7 +125,7 @@ public static class VitalWatchStatusExtensions
             return 1;
         }
 
-        output.WriteLine("  ✓ Yapılandırma tamam.");
+        output.WriteLine("  ✓ Configuration OK.");
 
         var reporter = services.GetRequiredService<Reporter>();
 
@@ -128,7 +133,7 @@ public static class VitalWatchStatusExtensions
         {
             // Gerçek bir hata gönderilir: hem taşıma hem temizlik sınanmış olur.
             var result = await reporter
-                .SendNowAsync(new InvalidOperationException("vitalwatch-status --test ile üretilen sınama olayı"))
+                .SendNowAsync(new InvalidOperationException("Test event generated by vitalwatch-status --test"))
                 .ConfigureAwait(false);
 
             /*
@@ -137,13 +142,13 @@ public static class VitalWatchStatusExtensions
              */
             if (!result.Sent)
             {
-                output.WriteLine($"  ✗ Sınama olayı GÖNDERİLEMEDİ: {result.Error ?? $"HTTP {result.Status}"}");
+                output.WriteLine($"  ✗ Test event could NOT be sent: {result.Error ?? $"HTTP {result.Status}"}");
                 output.WriteLine();
 
                 return 1;
             }
 
-            output.WriteLine($"  ✓ Sınama olayı gönderildi (HTTP {result.Status}).");
+            output.WriteLine($"  ✓ Test event sent (HTTP {result.Status}).");
         }
 
         /*
@@ -156,19 +161,19 @@ public static class VitalWatchStatusExtensions
 
             if (!result.Sent)
             {
-                output.WriteLine($"  ✗ Canlılık isteği GÖNDERİLEMEDİ: {result.Error ?? $"HTTP {result.Status}"}");
+                output.WriteLine($"  ✗ Liveness request could NOT be sent: {result.Error ?? $"HTTP {result.Status}"}");
                 output.WriteLine();
 
                 return 1;
             }
 
-            output.WriteLine($"  ✓ Canlılık isteği gönderildi (HTTP {result.Status}).");
+            output.WriteLine($"  ✓ Liveness request sent (HTTP {result.Status}).");
         }
 
         output.WriteLine();
-        output.WriteLine("  Verinin ulaştığı yalnızca hub panelinden doğrulanır:");
-        output.WriteLine("  proje satırında bağlantı durumu \"Bağlı\" görünmelidir.");
-        output.WriteLine("  Hub geçersiz imzaya da 204 döner; buradan anlaşılmaz.");
+        output.WriteLine("  Only the hub panel can confirm that data arrives:");
+        output.WriteLine("  the project row should show the connection status \"Connected\".");
+        output.WriteLine("  The hub returns 204 even for an invalid signature; this command cannot tell.");
         output.WriteLine();
 
         return 0;

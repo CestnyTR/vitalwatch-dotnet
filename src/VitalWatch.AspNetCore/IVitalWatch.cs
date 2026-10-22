@@ -1,40 +1,43 @@
 namespace VitalWatch;
 
 /// <summary>
-/// Elle bildirim ve teşhis için enjekte edilebilir arayüz.
+/// Injectable interface for manual reporting and diagnostics.
 /// </summary>
 /// <remarks>
-/// DI dışından (statik bağlamdan) aynı işlemler <see cref="VitalWatchSdk"/> ile yapılır.
-/// Hiçbir üye hata fırlatmaz.
+/// Outside DI (from a static context) the same operations are available through
+/// <see cref="VitalWatchSdk"/>. No member throws.
 /// </remarks>
 public interface IVitalWatch
 {
-    /// <summary>İzleme etkin ve yapılandırılmış mı.</summary>
+    /// <summary>Whether monitoring is enabled and configured.</summary>
     bool Enabled { get; }
 
     /// <summary>
-    /// Bir hatayı hub'a bildirir. Kuyruğa bırakır ve hemen döner — beklenmesi gerekmez,
-    /// kullanıcı isteğini bekletmez.
+    /// Reports an exception to the hub. Queues it and returns immediately — no need to await,
+    /// and the user's request is never held up.
     /// </summary>
-    /// <param name="exception">Bildirilecek hata. Aynı nesne ikinci kez gönderilmez.</param>
+    /// <param name="exception">The exception to report. The same instance is never sent twice.</param>
     /// <param name="kind">
-    /// Olay türü: <c>exception</c> (varsayılan), <c>fatal</c>, <c>job_failed</c>,
-    /// <c>command_failed</c>. Tanınmayan değer <c>exception</c> sayılır.
+    /// Event kind: <c>exception</c> (default), <c>fatal</c>, <c>job_failed</c>,
+    /// <c>command_failed</c>. An unrecognized value is treated as <c>exception</c>.
     /// </param>
-    /// <returns>Kuyruğa alındıysa <c>true</c>. Yok sayılan, daha önce bildirilmiş ya da
-    /// kuyruk dolu olduğu için atılan hatada <c>false</c>.</returns>
+    /// <returns><c>true</c> if queued; <c>false</c> if the exception is ignored, was already
+    /// reported, or was dropped because the queue is full.</returns>
     /// <remarks>
-    /// Bir HTTP isteğinin içinden çağrılırsa rota ve yöntem kendiliğinden eklenir ve aynı istek
-    /// 5xx ile biterse ayrıca stack'siz bir "HTTP 500" kaydı açılmaz.
+    /// When called from within an HTTP request, the route and method are added automatically,
+    /// and if the same request ends with a 5xx no separate stack-less "HTTP 500" event is created.
     /// </remarks>
     bool Report(Exception exception, string? kind = null);
 
     /// <summary>
-    /// "Buradayım" — olay taşımayan canlılık isteğini hemen gönderir ve sonucu döndürür.
+    /// "I am here" — immediately sends a liveness request that carries no events and returns
+    /// the result.
     /// </summary>
+    /// <param name="cancellationToken">Cancels the request.</param>
     Task<ReportResult> HeartbeatAsync(CancellationToken cancellationToken = default);
 
-    /// <summary>Kuyruktaki olayların gönderilmesini en çok <paramref name="timeout"/> kadar bekler.</summary>
-    /// <returns>Kuyruk boşaldıysa <c>true</c>.</returns>
+    /// <summary>Waits at most <paramref name="timeout"/> for queued events to be sent.</summary>
+    /// <param name="timeout">The maximum time to wait.</param>
+    /// <returns><c>true</c> if the queue was drained.</returns>
     Task<bool> FlushAsync(TimeSpan timeout);
 }

@@ -150,7 +150,7 @@ public sealed class HostTests : IAsyncLifetime
         Assert.True(request.Accepted);
         Assert.Equal(0, request.Body.GetProperty("events").GetArrayLength());
         Assert.Equal("dotnet", request.Body.GetProperty("runtime").GetString());
-        Assert.Equal("0.1.0", request.Body.GetProperty("sdk_version").GetString());
+        Assert.Equal("0.1.1", request.Body.GetProperty("sdk_version").GetString());
         Assert.Equal("production", request.Body.GetProperty("env").GetString());
         Assert.Equal($"/api/i/{FakeHub.Key}/server", "/api/i/" + request.Key + "/server");
         Assert.False(request.Headers.ContainsKey("traceparent"));
@@ -214,8 +214,8 @@ public sealed class HostTests : IAsyncLifetime
         var warning = Assert.Single(warnings);
 
         Assert.Equal(LogLevel.Warning, warning.Level);
-        Assert.Contains("VITALWATCH_KEY tanımlı değil", warning.Message);
-        Assert.Contains("64 karakter olmalı, 5 karakter", warning.Message);
+        Assert.Contains("VITALWATCH_KEY not set", warning.Message);
+        Assert.Contains("must be 64 characters, got 5", warning.Message);
         Assert.Contains("--vitalwatch-status", warning.Message);
         Assert.DoesNotContain("abcde", warning.Message); // secret'in kendisi günlüğe yazılmaz
     }

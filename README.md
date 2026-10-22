@@ -1,27 +1,28 @@
 # VitalWatch.AspNetCore
 
-[VitalWatch Hub](https://github.com/CestnyTR/vitalwatch-hub) için ASP.NET Core raporlayıcı:
-yakalanmamış hatalar, 5xx yanıtlar, yavaş istekler, yavaş SQL sorguları ve çöken arka plan
-servisleri.
+ASP.NET Core reporter for [VitalWatch Hub](https://github.com/CestnyTR/vitalwatch-hub):
+unhandled exceptions, 5xx responses, slow requests, slow SQL queries and crashed background
+services.
 
-.NET 8 ve .NET 10. **Çalışma zamanı bağımlılığı yok** — yalnızca ASP.NET Core paylaşılan
-çerçevesi. EF Core, SqlClient ya da Npgsql paketine bağımlı değildir; varsa onları dinler.
+.NET 8 and .NET 10. **No runtime dependencies** — only the ASP.NET Core shared framework.
+It does not depend on the EF Core, SqlClient or Npgsql packages; it listens to them when they
+are present.
 
-Kardeş paketler: [`vitalwatch-node`](https://github.com/CestnyTR/vitalwatch-node) (Node),
+Sibling packages: [`vitalwatch-node`](https://github.com/CestnyTR/vitalwatch-node) (Node),
 [`vitalwatch`](https://github.com/CestnyTR/vitalwatch-python) (Python),
 [`cestnytr/vitalwatch-laravel`](https://github.com/CestnyTR/vitalwatch-laravel) (Laravel),
-`t.js` (tarayıcı, hub'dan servis edilir). Aynı ortam değişkenleri, aynı maskeleme, aynı
-tel sözleşmesi.
+`t.js` (browser, served by the hub). Same environment variables, same masking, same wire
+contract.
 
 ---
 
-## Kurulum
+## Installation
 
 ```bash
 dotnet add package VitalWatch.AspNetCore
 ```
 
-`Program.cs` — iki satır:
+`Program.cs` — two lines:
 
 ```csharp
 using VitalWatch;
@@ -30,49 +31,49 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddVitalWatch();          // 1
 
 var app = builder.Build();
-app.UseVitalWatch();                       // 2 — mümkün olduğunca erken
+app.UseVitalWatch();                       // 2 — as early as possible
 
-if (await app.RunVitalWatchStatusAsync(args)) return;   // isteğe bağlı: teşhis komutu
+if (await app.RunVitalWatchStatusAsync(args)) return;   // optional: diagnostic command
 
-// ... uygulamanın geri kalanı
+// ... rest of the application
 app.Run();
 ```
 
-`UseVitalWatch()` süre ölçümünü eklendiği noktadan başlatır; `builder.Build()`'den hemen
-sonra ekleyin. `UseExceptionHandler`'dan önce ya da sonra olması fark etmez (bkz.
-[Hata işleyicisiyle birlikte](#hata-işleyicisiyle-birlikte)).
+`UseVitalWatch()` starts timing from the point where it is added; add it right after
+`builder.Build()`. Whether it comes before or after `UseExceptionHandler` does not matter
+(see [Alongside an exception handler](#alongside-an-exception-handler)).
 
-### Yapılandırma
+### Configuration
 
-Ortam değişkenleri — kardeş paketlerle aynı adlar:
+Environment variables — same names as the sibling packages:
 
 ```env
 VITALWATCH_URL=https://vitalwatch.example.com
-VITALWATCH_KEY=proje-anahtari
-VITALWATCH_SECRET=<panelden alınan 64 karakterlik secret>
+VITALWATCH_KEY=project-key
+VITALWATCH_SECRET=<64-character secret from the panel>
 VITALWATCH_ENV=production
 ```
 
-ya da `appsettings.json`:
+or `appsettings.json`:
 
 ```json
 {
   "VitalWatch": {
     "Url": "https://vitalwatch.example.com",
-    "Key": "proje-anahtari",
+    "Key": "project-key",
     "Env": "production"
   }
 }
 ```
 
-**Secret'i `appsettings.json`'a yazmayın** — ortam değişkeni, user-secrets ya da gizli
-anahtar kasası kullanın. Depoya giren secret, depoyu okuyan herkesin elindedir.
+**Do not put the secret in `appsettings.json`** — use an environment variable, user-secrets
+or a key vault. A secret committed to the repository belongs to everyone who can read it.
 
-Öncelik (sonraki öncekini ezer):
+Precedence (later overrides earlier):
 
-1. `appsettings*.json` → `VitalWatch` bölümü
-2. Süreç ortamındaki `VITALWATCH_*` — **süreç ortamı her zaman kazanır** (kardeş paketlerdeki kural)
-3. Koddan: `AddVitalWatch(o => { ... })`
+1. `appsettings*.json` → `VitalWatch` section
+2. `VITALWATCH_*` in the process environment — **the process environment always wins** (same rule as the sibling packages)
+3. Code: `AddVitalWatch(o => { ... })`
 
 ```csharp
 builder.Services.AddVitalWatch(o =>
@@ -82,260 +83,283 @@ builder.Services.AddVitalWatch(o =>
 });
 ```
 
-### Kurulumu doğrulayın
+### Verify the installation
 
 ```bash
-dotnet run -- --vitalwatch-status            # yapılandırmayı gösterir
-dotnet run -- --vitalwatch-status --test     # gerçek bir sınama hatası gönderir
-dotnet run -- --vitalwatch-status --vitalwatch   # panele hata düşürmeden canlılık isteği
-# yayınlanmış uygulamada:
-dotnet Uygulama.dll --vitalwatch-status --test
+dotnet run -- --vitalwatch-status            # show the configuration
+dotnet run -- --vitalwatch-status --test     # send a real test error
+dotnet run -- --vitalwatch-status --vitalwatch   # liveness request without creating an error in the panel
+# in a published app:
+dotnet MyApp.dll --vitalwatch-status --test
 ```
 
+Sample output:
+
 ```
-  SDK sürümü         0.1.0
-  Güncel sürüm       0.1.0
-  Etkin              evet
-  Hub adresi         https://vitalwatch.example.com
-  Proje anahtarı     proje-anahtari
-  Secret uzunluğu    64 karakter
+  SDK version        0.1.1
+  Latest version     0.1.1
+  Enabled            yes
+  Hub URL            https://vitalwatch.example.com
+  Project key        project-key
+  Secret length      64 characters
   Environment        production
-  Sürüm etiketi      a1b2c3d4e5f6 (kaynak: .git)
+  Release tag        a1b2c3d4e5f6 (source: .git)
   .NET               10.0.12
 
-  ✓ Yapılandırma tamam.
-  ✓ Sınama olayı gönderildi (HTTP 204).
+  ✓ Configuration OK.
+  ✓ Test event sent (HTTP 204).
+
+  Only the hub panel can confirm that data arrives:
+  the project row should show the connection status "Connected".
+  The hub returns 204 even for an invalid signature; this command cannot tell.
 ```
 
-Komut uygulamanın **kendi** host'unda çalışır, web sunucusunu başlatmaz ve çıkar
-(sorun varsa çıkış kodu 1). Ayrı bir `dotnet tool` değil, çünkü öyle bir araç uygulamanın
-gördüğü yapılandırmayı göremezdi: `appsettings.Production.json`, user-secrets, kasa ve
-koddan verilen ayarlar ancak uygulamanın host'unda birleşir. Teşhis aracının yanlış teşhis
-koyması, hiç teşhis koymamaktan kötüdür. HTTP ucu da değil: yapılandırmayı internete açardı.
+The command runs in the application's **own** host, does not start the web server, and exits
+(exit code 1 if something is wrong). It is not a separate `dotnet tool`, because such a tool
+could not see the configuration the application sees: `appsettings.Production.json`,
+user-secrets, a key vault and settings passed in code only come together in the application's
+host. A diagnostic tool that gives the wrong diagnosis is worse than none. It is not an HTTP
+endpoint either: that would expose the configuration to the internet.
 
-`RunVitalWatchStatusAsync` satırını eklemeseniz de yapılandırma eksik ya da hatalıysa
-(URL/anahtar/secret yok, secret 64 karakter değil, `http://` adres, tanınmayan ortam)
-uygulama başlarken **tek bir uyarı** günlüğe yazılır.
+Even without the `RunVitalWatchStatusAsync` line, if the configuration is missing or invalid
+(no URL/key/secret, secret not 64 characters, `http://` URL, unrecognized environment) a
+**single warning** is logged at startup.
 
-> Hub geçersiz imzaya da 204 döner. Verinin gerçekten ulaştığı yalnızca hub panelinden
-> doğrulanır: proje satırında bağlantı durumu "Bağlı" görünmelidir.
+> The hub returns 204 even for an invalid signature. The only way to confirm that data
+> actually arrives is the hub panel: the project row should show the connection status
+> "Connected".
 
-`VITALWATCH_STATUS_OFFLINE=1` NuGet'te güncel sürüm denetimini atlar.
+`VITALWATCH_STATUS_OFFLINE=1` skips the latest-version check against NuGet.
 
 ---
 
-## Ne toplar
+## What it collects
 
-| Tür | Ne zaman |
+| Type | When |
 |---|---|
-| `exception` | İstek hattında yakalanmamış istisna. Rota **deseniyle**: `GET /api/products/{id}` |
-| `http_5xx` | İstisnasız 5xx yanıt (`Results.StatusCode(503)` …) |
-| `slow_request` | `SlowRequestMs`'i aşan istek: süre, durum, sorgu sayısı, en yavaş sorgu |
-| `slow_query` | `SlowQueryMs`'i aşan SQL komutu, literal değerleri `?` ile |
-| `job_failed` | Çöken `BackgroundService` / hosted service; "Yol" sütununda servis türü |
-| `fatal` | Bellek tükenmesi; süreci düşüren yakalanmamış istisna `exception` olarak |
+| `exception` | Unhandled exception in the request pipeline. Reported with the route **pattern**: `GET /api/products/{id}` |
+| `http_5xx` | 5xx response without an exception (`Results.StatusCode(503)` …) |
+| `slow_request` | Request exceeding `SlowRequestMs`: duration, status, query count, slowest query |
+| `slow_query` | SQL command exceeding `SlowQueryMs`, literal values replaced with `?` |
+| `job_failed` | Crashed `BackgroundService` / hosted service; the service type appears in the "Path" column |
+| `fatal` | Out of memory; an unhandled exception that brings down the process is reported as `exception` |
 
-Her olayda: istisna sınıfı, maskelenmiş mesaj ve stack, pdb varsa dosya ve satır, rota
-deseni, yöntem, ortam, sürüm etiketi, `runtime: "dotnet"`, .NET sürümü, SDK sürümü.
+Every event carries: exception class, masked message and stack trace, file and line when a pdb
+is available, route pattern, method, environment, release tag, `runtime: "dotnet"`, .NET
+version, SDK version.
 
-- **Tek arıza, tek kayıt.** İstisnalı istek yalnızca stack'li `exception` açar; aynı istek
-  için ayrıca `http_5xx` gönderilmez. Aynı istisna nesnesi hangi yoldan gelirse gelsin
-  (ara katman, hata işleyicisi, günlük, elle bildirim) bir kez gider.
-- **4xx gönderilmez.** `BadHttpRequestException` (400) ve uygulamanın `IExceptionHandler`'ı
-  ile 4xx'e çevrilen istisna arıza değildir. İstemcinin kopması (iptal) da.
-- **Hata yutulmaz.** İstisna kaydedilir ve aynı stack'le yeniden fırlatılır; hata
-  sayfanız, `ProblemDetails`'ınız aynen çalışır.
+- **One failure, one record.** A request that throws opens only an `exception` with a stack
+  trace; no separate `http_5xx` is sent for the same request. The same exception object is
+  sent once, whichever path it arrives through (middleware, exception handler, logging,
+  manual report).
+- **4xx is not sent.** `BadHttpRequestException` (400) and exceptions that the application's
+  `IExceptionHandler` turns into a 4xx are not failures. Neither is a client disconnect
+  (cancellation).
+- **Exceptions are never swallowed.** The exception is recorded and rethrown with the same
+  stack trace; your error page and `ProblemDetails` keep working as before.
 
-### Hata işleyicisiyle birlikte
+### Alongside an exception handler
 
 ```csharp
 app.UseVitalWatch();
-app.UseExceptionHandler("/Error");   // önce ya da sonra — ikisi de çalışır
+app.UseExceptionHandler("/Error");   // before or after — both work
 ```
 
-- `UseVitalWatch` **önce** ise istisna ara katmana hiç ulaşmaz; hata işleyicisinin yayınladığı
-  tanılama olayından alınır ve yanıt 5xx ile biterse raporlanır.
-- **Sonra** ise ara katman istisnayı kendisi görür ve yeniden fırlatır. İşleyici isteği
-  `/Error`'a yeniden yürüttüğünde ikinci geçiş ölçülmez; panelde `/Error` değil, hatanın
-  patladığı uç görünür.
+- If `UseVitalWatch` comes **first**, the exception never reaches the middleware; it is
+  taken from the diagnostic event published by the exception handler and reported if the
+  response ends with a 5xx.
+- If it comes **after**, the middleware sees the exception itself and rethrows it. When the
+  handler re-executes the request at `/Error`, the second pass is not measured; the panel
+  shows the endpoint that failed, not `/Error`.
 
-### Yavaş SQL
+### Slow SQL
 
-Kurulum gerektirmez. Kaynaklar:
+No setup required. Sources:
 
-| Kaynak | Kapsam |
+| Source | Coverage |
 |---|---|
-| EF Core `DiagnosticListener` | Bütün EF sağlayıcıları (SQL Server, PostgreSQL, SQLite, MySQL …) |
-| SqlClient `DiagnosticListener` | Dapper / ham ADO.NET ile SQL Server (Microsoft.Data.SqlClient ve System.Data.SqlClient) |
-| Npgsql `ActivitySource` | Dapper / ham ADO.NET ile PostgreSQL |
+| EF Core `DiagnosticListener` | All EF providers (SQL Server, PostgreSQL, SQLite, MySQL …) |
+| SqlClient `DiagnosticListener` | SQL Server via Dapper / raw ADO.NET (Microsoft.Data.SqlClient and System.Data.SqlClient) |
+| Npgsql `ActivitySource` | PostgreSQL via Dapper / raw ADO.NET |
 
-- Sorgu sayısı **istek başına** tutulur (`AsyncLocal`): eşzamanlı istekler birbirinin
-  sorgularını görmez. `slow_request` olayında `query_count`, `slowest_query_sql`,
-  `slowest_query_ms` gelir — N+1 sorununu yakalamanın yolu.
-- SQL **normalize edilir**: `where email = 'ahmet@ornek.com' and id = 42` →
-  `where email = ? and id = ?`. Hem KVKK gereği hem gruplama için: aynı sorgu farklı
-  parametrelerle tek parmak izinde toplanır. PostgreSQL'in çift tırnaklı tanımlayıcıları da
-  `?` olur — kardeş paketler ve hub aynısını yapıyor.
-- EF Core ile SqlClient/Npgsql aynı komutu iki kez bildirir; paket bir kez sayar. Bilinen
-  taviz: aynı istekte hem EF hem ham Npgsql (Dapper) kullanılıyorsa EF'den sonraki ham
-  Npgsql sorguları sayılmaz.
+- The query count is tracked **per request** (`AsyncLocal`): concurrent requests do not see
+  each other's queries. `slow_request` events include `query_count`, `slowest_query_sql` and
+  `slowest_query_ms` — the way to catch N+1 problems.
+- SQL is **normalized**: `where email = 'jane@example.com' and id = 42` →
+  `where email = ? and id = ?`. This serves both privacy (KVKK/GDPR) and grouping: the same
+  query with different parameters lands under a single fingerprint. PostgreSQL's
+  double-quoted identifiers also become `?` — the sibling packages and the hub do the same.
+- EF Core and SqlClient/Npgsql both report the same command; the package counts it once.
+  Known trade-off: if a single request uses both EF and raw Npgsql (Dapper), raw Npgsql
+  queries after the EF ones are not counted.
 
-### Arka plan servisleri
+### Background services
 
-`BackgroundService.ExecuteAsync` fırlattığında .NET hiçbir kanca yayınlamıyor; tek iz
-host'un kendi günlük kaydı. Paket bu yüzden küçük bir günlük sağlayıcısı ekler ve yalnızca
-`Microsoft.Extensions.Hosting.Internal.Host` kategorisindeki **Error/Critical, istisnalı**
-kayıtları dinler. Uygulamanızın diğer günlüklerine dokunmaz.
+When `BackgroundService.ExecuteAsync` throws, .NET publishes no hook; the only trace is the
+host's own log entry. The package therefore adds a small logging provider that listens only
+to **Error/Critical entries with an exception** in the
+`Microsoft.Extensions.Hosting.Internal.Host` category. It does not touch your application's
+other logs.
 
-> `builder.Logging.ClearProviders()` kullanıyorsanız onu `AddVitalWatch()`'tan **önce**
-> çağırın; sonra çağrılırsa paketin günlük sağlayıcısı da silinir ve `job_failed` gelmez.
+> If you use `builder.Logging.ClearProviders()`, call it **before** `AddVitalWatch()`;
+> calling it afterwards also removes the package's logging provider, and `job_failed`
+> events stop arriving.
 
-### Elle bildirim
+### Manual reporting
 
 ```csharp
-// Enjekte ederek
+// Via injection
 app.MapPost("/import", async (IVitalWatch vitalWatch) =>
 {
     try { /* ... */ }
     catch (Exception e)
     {
-        vitalWatch.Report(e);   // kuyruğa bırakır, beklemez
+        vitalWatch.Report(e);   // enqueues, does not wait
         return Results.Problem();
     }
 });
 
-// DI dışından
+// Outside DI
 VitalWatchSdk.Report(exception);
 VitalWatchSdk.Report(exception, "command_failed");
 ```
 
-İstek içinden çağrılırsa rota ve yöntem kendiliğinden eklenir, aynı istek için ayrıca
-"HTTP 500" açılmaz. Statik sınıfın adı `VitalWatchSdk`: ad alanıyla aynı adı taşıyan bir sınıf
-(`VitalWatch.Report`) `using VitalWatch;` yazılan dosyada derlenmezdi.
+When called inside a request, the route and method are added automatically, and no separate
+"HTTP 500" is opened for the same request. The static class is named `VitalWatchSdk`: a class
+with the same name as the namespace (`VitalWatch.Report`) would not compile in a file that
+has `using VitalWatch;`.
 
 ---
 
-## Ne toplamaz
+## What it does not collect
 
-Bunlar yapılandırmayla dahi açılamaz — kodda karşılığı yoktur:
+These cannot be enabled even through configuration — there is no code for them:
 
-- IP adresi
+- IP address
 - User-Agent
-- İstek gövdesi / form verisi
-- Query string **değerleri** (yalnızca yol saklanır; eşleşen rotada desen)
-- Oturum verisi, çerez, `Authorization` başlığı
-- Ham SQL literal değerleri
+- Request body / form data
+- Query string **values** (only the path is stored; the pattern for matched routes)
+- Session data, cookies, the `Authorization` header
+- Raw SQL literal values
 
-Mesaj ve stack gönderilmeden önce e-posta, TC kimlik no, telefon, IBAN, kart numarası ve
-uzun rastgele diziler (oturum kimliği, API anahtarı) maskelenir. İç istisnaların mesajları
-da (`DbUpdateException`'ın içindeki sürücü hatası) SQL temizliğinden geçer. Desenler kardeş
-paketlerle birebir aynıdır ve hub'ın ürettiği ortak test vektörleriyle sınanır.
-
----
-
-## Davranış garantileri — ihlal edilemez
-
-1. **Hata yutulmaz.** İstisna `throw;` ile aynı stack'le yeniden fırlatılır.
-2. **Kendi hatasını raporlamaz.** Bütün paket kodu kendi hatasını yutar; sonsuz döngü yok.
-3. **Kullanıcı isteğini bekletmez.** İstek yalnızca olayı kuyruğa bırakır; gönderim tek bir
-   arka plan görevinden, kısa zaman aşımıyla yapılır. Kuyruk sınırlıdır (100); dolarsa olay
-   düşürülür — izleme paketinin uygulamanın belleğini yemesi kabul edilemez.
-4. **Hub erişilemezse sessizce vazgeçilir.** Günlük kirliliği yok, yeniden deneme fırtınası yok.
-5. **`VITALWATCH_ENABLED=false` iken hiçbir şey kurulmaz** — ne ara katman, ne günlük
-   sağlayıcısı, ne tanılama aboneliği, ne arka plan görevi. Yeniden dağıtmadan izlemeyi
-   kapatmanın yolu.
-6. **Süreç yönetimine karışılmaz.** Süreci düşüren istisna raporlanır ama süreç yine düşer.
-
-> Bir izleme paketinin izlediği uygulamayı bozması, çözdüğü sorundan büyük bir sorundur.
+Before sending, messages and stack traces are masked for email addresses, Turkish national ID
+numbers, phone numbers, IBANs, card numbers and long random strings (session IDs, API keys).
+Inner exception messages (such as the driver error inside a `DbUpdateException`) also go
+through SQL scrubbing. The patterns are identical to the sibling packages and are tested
+against the shared test vectors produced by the hub.
 
 ---
 
-## Gönderim
+## Behavior guarantees — non-negotiable
 
-- `POST {URL}/api/i/{KEY}/server`, `X-VitalWatch-Signature: sha256=hex(hmac_sha256(secret, "{timestamp}." + gövde))`
-  ve `X-VitalWatch-Timestamp`. Yönlendirme takip edilmez.
-- İstek başına **en çok 8 olay ve 8 KB** — hub fazlasını sessizce atar. Sığmayan olayda önce
-  stack, sonra mesaj (200 karaktere) kırpılır; birden çok olay sığmıyorsa sonraki isteğe kalır.
-- Aynı anda düşen olaylar 50 ms içinde tek istekte toplanır (hub'ın IP başına 60/dk sınırı).
-- Uygulama kapanırken kuyruk en çok `zaman aşımı + 0,5 sn` (üst sınır 3 sn) boşaltılır.
-- `traceparent` başlığı hub'a gönderilmez: izleme istekleri uygulamanızın dağıtık izine karışmaz.
+1. **Exceptions are never swallowed.** The exception is rethrown with `throw;`, preserving the stack trace.
+2. **It never reports its own errors.** All package code swallows its own errors; no infinite loops.
+3. **It never blocks the user's request.** The request only enqueues the event; sending happens
+   on a single background task with a short timeout. The queue is bounded (100); when full,
+   events are dropped — a monitoring package must not eat the application's memory.
+4. **If the hub is unreachable, it gives up silently.** No log noise, no retry storms.
+5. **Nothing is installed when `VITALWATCH_ENABLED=false`** — no middleware, no logging
+   provider, no diagnostic subscription, no background task. The way to turn monitoring off
+   without redeploying.
+6. **It does not interfere with process lifetime.** An exception that brings down the process
+   is reported, but the process still goes down.
 
-## Canlılık nabzı
-
-Paket sekiz saatte bir, olay taşımayan küçük bir istek (`{"events":[]}`) gönderir; ilki
-uygulama başlar başlamaz. Hub bir kurulumun çalıştığını eskiden yalnızca gelen hatalardan
-anlıyordu ve hatasız çalışan uygulama "kurulum bozuk" görünüyordu. Aralık, hub'ın 24 saatlik
-sessizlik eşiğinin üçte biri: iki tur kaçsa bile alarm çalmaz. `HeartbeatInterval =
-TimeSpan.Zero` kapatır.
+> A monitoring package breaking the application it monitors is a bigger problem than the one
+> it solves.
 
 ---
 
-## Yapılandırma
+## Delivery
 
-| Değişken | appsettings | Varsayılan | Açıklama |
+- `POST {URL}/api/i/{KEY}/server`, with `X-VitalWatch-Signature: sha256=hex(hmac_sha256(secret, "{timestamp}." + body))`
+  and `X-VitalWatch-Timestamp`. Redirects are not followed.
+- **At most 8 events and 8 KB** per request — the hub silently drops the excess. For an event
+  that does not fit, the stack trace is trimmed first, then the message (to 200 characters);
+  if several events do not fit, the rest wait for the next request.
+- Events raised at the same time are batched into one request within 50 ms (the hub limits
+  each IP to 60/min).
+- On application shutdown the queue is drained for at most `timeout + 0.5 s` (capped at 3 s).
+- The `traceparent` header is not sent to the hub: monitoring requests do not mix into your
+  application's distributed traces.
+
+## Liveness heartbeat
+
+Every eight hours the package sends a small request with no events (`{"events":[]}`); the
+first one goes out as soon as the application starts. The hub used to infer that an
+installation was working only from incoming errors, so an application running without errors
+looked like a "broken installation". The interval is a third of the hub's 24-hour silence
+threshold: even if two rounds are missed, no alert fires. `HeartbeatInterval =
+TimeSpan.Zero` turns it off.
+
+---
+
+## Configuration reference
+
+| Variable | appsettings | Default | Description |
 |---|---|---|---|
-| `VITALWATCH_ENABLED` | `Enabled` | `true` | `false` (ya da `0`/`no`/`off`) ise hiçbir şey kurulmaz |
-| `VITALWATCH_URL` | `Url` | — | Hub adresi |
-| `VITALWATCH_KEY` | `Key` | — | Panelden alınan proje anahtarı |
-| `VITALWATCH_SECRET` | `Secret` | — | 64 karakter. **Yalnızca sunucuda bulunur** |
-| `VITALWATCH_ENV` | `Env` | ASP.NET Core ortamı | `production` · `staging` · `local`. Takma adlar çevrilir: `Development`/`dev`/`test` → local, `Staging`/`stage`/`uat` → staging, `Production`/`prod`/`live` → production. Tanınmayan değeri hub reddeder; teşhis komutu hata verir |
-| `VITALWATCH_RELEASE` | `Release` | kendiliğinden | Sürüm etiketi, bkz. [Sürüm etiketi](#sürüm-etiketi) |
-| `VITALWATCH_TIMEOUT` | `Timeout` | `2000` | Gönderim zaman aşımı. **100 ve üstü milisaniye, altı saniye** (`2` → 2000 ms). 100–10000 ms aralığına sıkıştırılır; geçersiz, sıfır ya da negatif değer 2000 olur. Kural bütün paketlerde aynı |
-| `VITALWATCH_SLOW_REQUEST_MS` | `SlowRequestMs` | `1000` | Bu süreyi aşan istek yavaş sayılır |
-| `VITALWATCH_SLOW_QUERY_MS` | `SlowQueryMs` | `500` | Bu süreyi aşan SQL komutu yavaş sayılır |
-| — | — | — | Yalnızca koddan: `Ignore` (yok sayılacak istisna türleri, alt sınıflar dahil), `HeartbeatInterval` |
+| `VITALWATCH_ENABLED` | `Enabled` | `true` | If `false` (or `0`/`no`/`off`), nothing is installed |
+| `VITALWATCH_URL` | `Url` | — | Hub URL |
+| `VITALWATCH_KEY` | `Key` | — | Project key from the panel |
+| `VITALWATCH_SECRET` | `Secret` | — | 64 characters. **Server-side only** |
+| `VITALWATCH_ENV` | `Env` | ASP.NET Core environment | `production` · `staging` · `local`. Aliases are mapped: `Development`/`dev`/`test` → local, `Staging`/`stage`/`uat` → staging, `Production`/`prod`/`live` → production. The hub rejects unrecognized values; the diagnostic command reports an error |
+| `VITALWATCH_RELEASE` | `Release` | automatic | Release tag, see [Release tag](#release-tag) |
+| `VITALWATCH_TIMEOUT` | `Timeout` | `2000` | Send timeout. **Values of 100 and above are milliseconds, below that seconds** (`2` → 2000 ms). Clamped to 100–10000 ms; invalid, zero or negative values become 2000. Same rule in every package |
+| `VITALWATCH_SLOW_REQUEST_MS` | `SlowRequestMs` | `1000` | Requests longer than this are considered slow |
+| `VITALWATCH_SLOW_QUERY_MS` | `SlowQueryMs` | `500` | SQL commands longer than this are considered slow |
+| — | — | — | Code only: `Ignore` (exception types to ignore, including subclasses), `HeartbeatInterval` |
 
-### Sürüm etiketi
+### Release tag
 
-Kurulumda bir kez, şu sırayla bulunur (kardeş paketlerle aynı kural):
+Resolved once at startup, in this order (same rule as the sibling packages):
 
-1. Açık değer: kod → `VITALWATCH_RELEASE` → `VitalWatch:Release`. Kırpılır, en çok 64 karakter.
-2. İlk dolu CI/PaaS değişkeni: `GIT_COMMIT`, `GIT_SHA`, `COMMIT_SHA`, `SOURCE_VERSION`,
+1. Explicit value: code → `VITALWATCH_RELEASE` → `VitalWatch:Release`. Trimmed, at most 64 characters.
+2. The first non-empty CI/PaaS variable: `GIT_COMMIT`, `GIT_SHA`, `COMMIT_SHA`, `SOURCE_VERSION`,
    `VERCEL_GIT_COMMIT_SHA`, `RENDER_GIT_COMMIT`, `HEROKU_SLUG_COMMIT`, `CI_COMMIT_SHA`.
-   Sha biçimindeyse küçük harf ilk 12 karakter.
-3. `.git`: `HEAD` → dal ref dosyası, yoksa `packed-refs`; ayrık HEAD doğrudan sha. `.git` bir
-   dosyaysa (worktree, alt modül) içindeki `gitdir:` izlenir. İçerik kökünde yoksa **en çok üç
-   üst dizine** bakılır — .NET projeleri çoğunlukla `repo/src/Uygulama` altında çalışır.
-   Yalnızca geçerli 40 hanelik sha kabul edilir; ilk 12 karakter.
-4. Hiçbiri yoksa etiket gönderilmez.
+   If it looks like a sha, the first 12 characters in lowercase.
+3. `.git`: `HEAD` → branch ref file, otherwise `packed-refs`; a detached HEAD is the sha itself.
+   If `.git` is a file (worktree, submodule), its `gitdir:` is followed. If it is not in the
+   content root, **up to three parent directories** are checked — .NET projects usually run
+   from `repo/src/MyApp`. Only a valid 40-character sha is accepted; the first 12 characters
+   are used.
+4. If none is found, no tag is sent.
 
-`git` programı çalıştırılmaz; yalnızca birkaç küçük dosya okunur. Teşhis komutu etiketi
-kaynağıyla gösterir.
+The `git` program is never executed; only a few small files are read. The diagnostic command
+shows the tag along with its source.
 
 ---
 
-## Sorun giderme
+## Troubleshooting
 
-| Belirti | Sebep / çözüm |
+| Symptom | Cause / fix |
 |---|---|
-| Panelde hiçbir şey yok, uygulama sessiz | `dotnet run -- --vitalwatch-status --test`. Başlangıçta "VitalWatch yapılandırması eksik" uyarısı var mı bakın |
-| Secret uzunluğu 64 değil | Kopyalarken başı/sonu eksik kalmış. Hub geçersiz imzaya da 204 döner; tek belirti budur |
-| Olaylar geliyor, ortam yanlış | `VITALWATCH_ENV` boşsa ASP.NET Core ortamı kullanılır; `ASPNETCORE_ENVIRONMENT` tanınmayan bir değerse (`QA`) hub reddeder |
-| `job_failed` gelmiyor | `ClearProviders()` `AddVitalWatch()`'tan sonra çağrılmış ya da `BackgroundService` istisnayı kendisi yakalıyor |
-| `slow_request`'te `query_count` yok | `UseVitalWatch()` eklenmemiş ya da sorgular istekten önce/sonra çalışıyor (arka plan) |
-| Stack'te `[token]` | Düz CamelCase adlar (`InvalidOperationException`, `HandleNonSuccessAndDebuggerNotification`) maskelenmez. 24+ karakterlik ad rakam, `_`/`-` ya da yan yana iki büyük harf taşıyorsa (`IOExceptionHandlerMiddleware1`) jeton deseniyle eşleşir. Desen bütün SDK'larda ve hub'da ortak; hub stack'i aynı kuralla yeniden maskeler |
-| Uygulama kapanırken son hata gitmedi | Kuyruk kapanışta en çok 3 sn boşaltılır; süreç `kill -9` ile öldürülürse kuyruk kaybolur |
+| Nothing in the panel, the app is silent | Run `dotnet run -- --vitalwatch-status --test`. Check for the startup warning "VitalWatch configuration is missing or invalid" |
+| Secret length is not 64 | The beginning or end was lost while copying. The hub returns 204 even for an invalid signature; this is the only symptom |
+| Events arrive with the wrong environment | If `VITALWATCH_ENV` is empty, the ASP.NET Core environment is used; if `ASPNETCORE_ENVIRONMENT` is an unrecognized value (`QA`), the hub rejects it |
+| No `job_failed` events | `ClearProviders()` is called after `AddVitalWatch()`, or the `BackgroundService` catches the exception itself |
+| No `query_count` in `slow_request` | `UseVitalWatch()` was not added, or the queries run before/after the request (in the background) |
+| `[token]` in the stack trace | Plain CamelCase names (`InvalidOperationException`, `HandleNonSuccessAndDebuggerNotification`) are not masked. A name of 24+ characters that contains a digit, `_`/`-` or two adjacent uppercase letters (`IOExceptionHandlerMiddleware1`) matches the token pattern. The pattern is shared by all SDKs and the hub; the hub re-masks stack traces with the same rule |
+| The last error was lost on shutdown | The queue is drained for at most 3 s on shutdown; if the process is killed with `kill -9`, the queue is lost |
 
-Geçici olarak kapatmak: `VITALWATCH_ENABLED=false` ve uygulamayı yeniden başlatın.
+To disable temporarily: set `VITALWATCH_ENABLED=false` and restart the application.
 
 ---
 
-## Geliştirme
+## Development
 
 ```bash
 dotnet test                      # net8.0 + net10.0
-dotnet test -f net10.0           # yalnızca .NET 10 çalışma zamanı kuruluysa
+dotnet test -f net10.0           # if only the .NET 10 runtime is installed
 dotnet pack src/VitalWatch.AspNetCore -c Release -o artifacts
 ```
 
-Testler hub'ın imza doğrulamasını birebir uygulayan sahte bir hub'a (Kestrel,
-`127.0.0.1:0`) karşı koşar; "204 aldım" yeterli sayılmaz, imzanın ve 8 KB / 8 olay
-sınırlarının tutulduğu doğrulanır. Maskeleme testleri hub'ın ürettiği ortak vektör dosyasını
-(`tests/VitalWatch.AspNetCore.Tests/Fixtures/mask-vectors.json`) okur.
+Tests run against a fake hub (Kestrel, `127.0.0.1:0`) that implements the hub's signature
+verification exactly; "got a 204" is not enough — they verify that the signature and the
+8 KB / 8 event limits hold. Masking tests read the shared vector file produced by the hub
+(`tests/VitalWatch.AspNetCore.Tests/Fixtures/mask-vectors.json`).
 
-Yayın: `<Version>` güncellenir, `v0.1.0` gibi etiket gönderilir; iş akışı NuGet trusted
-publishing ile yükler.
+Release: bump `<Version>`, push a tag such as `v0.1.0`; the workflow uploads to NuGet via
+trusted publishing.
 
-## Lisans
+## License
 
 MIT

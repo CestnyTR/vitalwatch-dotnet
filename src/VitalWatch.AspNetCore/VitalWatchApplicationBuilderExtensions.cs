@@ -10,17 +10,19 @@ namespace VitalWatch;
 public static class VitalWatchApplicationBuilderExtensions
 {
     /// <summary>
-    /// İstek ölçümünü ekler: yakalanmamış istisna, 5xx yanıt, yavaş istek ve istek başına
-    /// SQL sorgu sayısı.
+    /// Adds request measurement: unhandled exceptions, 5xx responses, slow requests and the
+    /// number of SQL queries per request.
     /// </summary>
+    /// <param name="app">The application builder.</param>
+    /// <returns>The same <paramref name="app"/>, for chaining.</returns>
     /// <remarks>
-    /// <para><b>Mümkün olduğunca erken</b> ekleyin — <c>builder.Build()</c>'den hemen sonra.
-    /// Süre ölçümü ara katmanın eklendiği noktadan başlar; sonraki her ara katman ölçüme dahil
-    /// olur.</para>
-    /// <para><c>UseExceptionHandler</c>'dan önce ya da sonra eklenmesi fark etmez: önceyse
-    /// işleyicinin yakaladığı istisna tanılama olayından alınır, sonraysa ara katman
-    /// istisnayı kendisi görür ve yeniden fırlatır.</para>
-    /// <para>İzleme kapalıysa ya da yapılandırma eksikse hiçbir şey eklenmez.</para>
+    /// <para>Add it <b>as early as possible</b> — right after <c>builder.Build()</c>. Timing
+    /// starts where the middleware is added; every middleware after it is included in the
+    /// measurement.</para>
+    /// <para>It does not matter whether it is added before or after <c>UseExceptionHandler</c>:
+    /// if before, the exception caught by the handler is taken from the diagnostic event; if
+    /// after, the middleware sees the exception itself and rethrows it.</para>
+    /// <para>Nothing is added when monitoring is disabled or the configuration is incomplete.</para>
     /// </remarks>
     public static IApplicationBuilder UseVitalWatch(this IApplicationBuilder app)
     {

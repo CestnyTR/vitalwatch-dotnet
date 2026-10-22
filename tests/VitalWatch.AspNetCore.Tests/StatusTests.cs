@@ -66,11 +66,11 @@ public sealed class StatusTests : IAsyncLifetime
 
         var text = output.ToString();
         Assert.True(Environment.ExitCode == 0, text);
-        Assert.Contains("✓ Yapılandırma tamam.", text);
-        Assert.Contains("Sınama olayı gönderildi (HTTP 204)", text);
-        Assert.Contains("Canlılık isteği gönderildi (HTTP 204)", text);
-        Assert.Contains("64 karakter", text);
-        Assert.Contains("v9.9.9 (kaynak: appsettings)", text);
+        Assert.Contains("✓ Configuration OK.", text);
+        Assert.Contains("✓ Test event sent (HTTP 204)", text);
+        Assert.Contains("✓ Liveness request sent (HTTP 204)", text);
+        Assert.Contains("Secret length      64 characters", text);
+        Assert.Contains("Release tag        v9.9.9 (source: appsettings)", text);
         Assert.DoesNotContain(_hub.Secret, text);
 
         Assert.Equal(2, _hub.Requests.Count);
@@ -99,8 +99,8 @@ public sealed class StatusTests : IAsyncLifetime
 
         var text = output.ToString();
         Assert.Equal(1, Environment.ExitCode);
-        Assert.Contains("VITALWATCH_KEY tanımlı değil", text);
-        Assert.Contains("64 karakter olmalı, 17 karakter", text);
+        Assert.Contains("VITALWATCH_KEY not set", text);
+        Assert.Contains("must be 64 characters, got 17", text);
         Assert.Contains("http://", text);
         Assert.Contains("\"qa\"", text);
 

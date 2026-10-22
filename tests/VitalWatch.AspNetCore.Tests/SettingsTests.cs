@@ -127,8 +127,8 @@ public class SettingsTests
 
         var problems = string.Join("\n", settings.Problems());
 
-        Assert.Contains("VITALWATCH_KEY tanımlı değil", problems);
-        Assert.Contains("64 karakter olmalı, 9 karakter", problems);
+        Assert.Contains("VITALWATCH_KEY not set", problems);
+        Assert.Contains("must be 64 characters, got 9", problems);
         Assert.Contains("http://", problems);
         Assert.Contains("\"qa\"", problems);
     }

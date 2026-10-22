@@ -40,7 +40,7 @@ internal sealed class VitalWatchHostedService : IHostedService
             if (problems.Count > 0)
             {
                 _logger.LogWarning(
-                    "VitalWatch yapılandırması eksik ya da hatalı: {Problems} Ayrıntı: dotnet run -- --vitalwatch-status",
+                    "VitalWatch configuration is missing or invalid: {Problems} Details: dotnet run -- --vitalwatch-status",
                     string.Join(" ", problems));
             }
 

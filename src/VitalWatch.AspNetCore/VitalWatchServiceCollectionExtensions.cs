@@ -13,17 +13,19 @@ namespace VitalWatch;
 public static class VitalWatchServiceCollectionExtensions
 {
     /// <summary>
-    /// VitalWatch'ı kaydeder. Yapılandırma <c>VitalWatch</c> bölümünden ve
-    /// <c>VITALWATCH_*</c> ortam değişkenlerinden okunur; <paramref name="configure"/>
-    /// her ikisini de ezer.
+    /// Registers VitalWatch. Configuration is read from the <c>VitalWatch</c> section and the
+    /// <c>VITALWATCH_*</c> environment variables; <paramref name="configure"/> overrides both.
     /// </summary>
+    /// <param name="services">The service collection.</param>
+    /// <param name="configure">Optional settings in code; they override every other source.</param>
+    /// <returns>The same <paramref name="services"/>, for chaining.</returns>
     /// <remarks>
-    /// <para><c>VITALWATCH_ENABLED=false</c> (ya da <c>VitalWatch:Enabled=false</c>) iken
-    /// <b>hiçbir şey kurulmaz</b>: ne ara katman, ne günlük sağlayıcısı, ne tanılama aboneliği,
-    /// ne arka plan görevi. Yalnızca boş bir <see cref="IVitalWatch"/> kaydedilir ki onu
-    /// enjekte eden kod çalışmaya devam etsin. Sorun şüphesinde izlemeyi yeniden dağıtmadan
-    /// kapatmanın yolu budur.</para>
-    /// <para>İstek ölçümü için ayrıca <c>app.UseVitalWatch()</c> çağrılmalıdır.</para>
+    /// <para>With <c>VITALWATCH_ENABLED=false</c> (or <c>VitalWatch:Enabled=false</c>)
+    /// <b>nothing is installed</b>: no middleware, no logger provider, no diagnostic
+    /// subscription, no background task. Only an empty <see cref="IVitalWatch"/> is registered so
+    /// that code injecting it keeps working. This is how to turn monitoring off without
+    /// redeploying when you suspect a problem.</para>
+    /// <para>For request measurement, <c>app.UseVitalWatch()</c> must also be called.</para>
     /// </remarks>
     public static IServiceCollection AddVitalWatch(this IServiceCollection services, Action<VitalWatchOptions>? configure = null)
     {

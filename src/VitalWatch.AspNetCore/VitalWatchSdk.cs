@@ -3,19 +3,19 @@ using VitalWatch.Internal;
 namespace VitalWatch;
 
 /// <summary>
-/// DI dışından elle bildirim: <c>VitalWatchSdk.Report(ex)</c>.
+/// Manual reporting outside DI: <c>VitalWatchSdk.Report(ex)</c>.
 /// </summary>
 /// <remarks>
-/// <para>Ad bilinçli olarak <c>VitalWatch</c> değil: ad alanıyla aynı adı taşıyan bir sınıf
-/// <c>using VitalWatch;</c> yazan dosyada <c>VitalWatch.Report(...)</c> çağrısını ad alanına
-/// çözer ve derlenmez.</para>
-/// <para><c>AddVitalWatch</c> çağrılmamışsa, izleme kapalıysa ya da host henüz kurulmamışsa
-/// çağrılar hiçbir şey yapmaz ve hata fırlatmaz. Enjekte edilebilir karşılığı
+/// <para>Deliberately not named <c>VitalWatch</c>: a class with the same name as the namespace
+/// would make <c>VitalWatch.Report(...)</c> resolve to the namespace in files with
+/// <c>using VitalWatch;</c>, and it would not compile.</para>
+/// <para>If <c>AddVitalWatch</c> was not called, monitoring is disabled or the host is not built
+/// yet, calls do nothing and never throw. The injectable counterpart is
 /// <see cref="IVitalWatch"/>.</para>
 /// </remarks>
 public static class VitalWatchSdk
 {
-    /// <summary>İzleme etkin mi (host kurulmuş, yapılandırma tamam).</summary>
+    /// <summary>Whether monitoring is enabled (host built, configuration complete).</summary>
     public static bool Enabled => Reporter.Current?.Active == true;
 
     /// <inheritdoc cref="IVitalWatch.Report"/>

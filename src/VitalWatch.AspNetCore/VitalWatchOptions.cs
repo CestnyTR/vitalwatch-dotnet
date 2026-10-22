@@ -1,71 +1,71 @@
 namespace VitalWatch;
 
 /// <summary>
-/// VitalWatch yapılandırması.
+/// VitalWatch configuration.
 /// </summary>
 /// <remarks>
-/// Değerler şu sırayla okunur, sonraki öncekini ezer:
+/// Values are read in this order, each overriding the previous:
 /// <list type="number">
-/// <item><c>appsettings.json</c> içindeki <c>VitalWatch</c> bölümü</item>
-/// <item>Süreç ortamındaki <c>VITALWATCH_*</c> değişkenleri — kardeş paketlerdeki kural:
-/// süreç ortamı dosyayı her zaman yener</item>
-/// <item><c>AddVitalWatch(options =&gt; ...)</c> içinde koddan verilen değerler</item>
+/// <item>The <c>VitalWatch</c> section in <c>appsettings.json</c></item>
+/// <item><c>VITALWATCH_*</c> variables in the process environment — the same rule as the
+/// sibling packages: the process environment always wins over the file</item>
+/// <item>Values passed in code via <c>AddVitalWatch(options =&gt; ...)</c></item>
 /// </list>
 /// </remarks>
 public sealed class VitalWatchOptions
 {
     /// <summary>
-    /// <c>false</c> ise hiçbir kanca kurulmaz ve hiçbir veri gönderilmez
-    /// (<c>VITALWATCH_ENABLED</c>). Varsayılan <c>true</c>.
+    /// When <c>false</c>, no hooks are installed and no data is sent
+    /// (<c>VITALWATCH_ENABLED</c>). Default <c>true</c>.
     /// </summary>
     public bool Enabled { get; set; } = true;
 
-    /// <summary>Hub adresi, örn. <c>https://hub.ornek.com</c> (<c>VITALWATCH_URL</c>).</summary>
+    /// <summary>Hub URL, e.g. <c>https://hub.example.com</c> (<c>VITALWATCH_URL</c>).</summary>
     public string? Url { get; set; }
 
-    /// <summary>Panelden alınan proje anahtarı (<c>VITALWATCH_KEY</c>).</summary>
+    /// <summary>Project key from the panel (<c>VITALWATCH_KEY</c>).</summary>
     public string? Key { get; set; }
 
     /// <summary>
-    /// 64 karakterlik proje secret'i (<c>VITALWATCH_SECRET</c>). Yalnızca sunucuda bulunur;
-    /// kaynak koda ya da depoya yazılmaz.
+    /// The 64-character project secret (<c>VITALWATCH_SECRET</c>). Keep it on the server only;
+    /// never commit it to source code or a repository.
     /// </summary>
     public string? Secret { get; set; }
 
     /// <summary>
-    /// Ortam: <c>production</c>, <c>staging</c> ya da <c>local</c> (<c>VITALWATCH_ENV</c>).
-    /// Boşsa ASP.NET Core ortam adı kullanılır (<c>Development</c> → <c>local</c>).
-    /// Takma adlar kardeş paketlerle aynı tabloyla çevrilir.
+    /// Environment: <c>production</c>, <c>staging</c> or <c>local</c> (<c>VITALWATCH_ENV</c>).
+    /// When empty, the ASP.NET Core environment name is used (<c>Development</c> → <c>local</c>).
+    /// Aliases are mapped with the same table as the sibling packages.
     /// </summary>
     public string? Env { get; set; }
 
     /// <summary>
-    /// Sürüm etiketi (<c>VITALWATCH_RELEASE</c>). Boşsa CI değişkenlerinden ya da
-    /// <c>.git</c>'ten kendiliğinden bulunur.
+    /// Release tag (<c>VITALWATCH_RELEASE</c>). When empty, it is detected automatically from CI
+    /// variables or <c>.git</c>.
     /// </summary>
     public string? Release { get; set; }
 
     /// <summary>
-    /// Gönderim zaman aşımı (<c>VITALWATCH_TIMEOUT</c>). 100 ve üstü milisaniye, altı saniye
-    /// sayılır (<c>2</c> → 2000 ms). Sonuç 100–10000 ms aralığına sıkıştırılır; geçersiz,
-    /// sıfır ya da negatif değer 2000 ms olur. Kural bütün VitalWatch paketlerinde aynı.
+    /// Send timeout (<c>VITALWATCH_TIMEOUT</c>). Values of 100 and above are milliseconds, below
+    /// that seconds (<c>2</c> → 2000 ms). The result is clamped to 100–10000 ms; an invalid,
+    /// zero or negative value becomes 2000 ms. The rule is the same in all VitalWatch packages.
     /// </summary>
     public double? Timeout { get; set; }
 
-    /// <summary>Bu süreyi aşan istek yavaş sayılır, ms (<c>VITALWATCH_SLOW_REQUEST_MS</c>). Varsayılan 1000.</summary>
+    /// <summary>Requests taking longer than this are considered slow, in ms (<c>VITALWATCH_SLOW_REQUEST_MS</c>). Default 1000.</summary>
     public int SlowRequestMs { get; set; } = 1000;
 
-    /// <summary>Bu süreyi aşan SQL sorgusu yavaş sayılır, ms (<c>VITALWATCH_SLOW_QUERY_MS</c>). Varsayılan 500.</summary>
+    /// <summary>SQL queries taking longer than this are considered slow, in ms (<c>VITALWATCH_SLOW_QUERY_MS</c>). Default 500.</summary>
     public int SlowQueryMs { get; set; } = 500;
 
     /// <summary>
-    /// Raporlanmayacak istisna türleri. Alt sınıflar da eşleşir.
+    /// Exception types that are not reported. Subclasses match as well.
     /// </summary>
     public IList<Type> Ignore { get; } = new List<Type>();
 
     /// <summary>
-    /// Canlılık isteğinin aralığı. Varsayılan 8 saat — hub'ın 24 saatlik sessizlik eşiğinin
-    /// üçte biri. <see cref="TimeSpan.Zero"/> canlılık isteğini kapatır.
+    /// Interval of the liveness request. Default 8 hours — a third of the hub's 24-hour silence
+    /// threshold. <see cref="TimeSpan.Zero"/> disables the liveness request.
     /// </summary>
     public TimeSpan HeartbeatInterval { get; set; } = TimeSpan.FromHours(8);
 }

@@ -55,7 +55,7 @@ internal sealed class Settings
 
         if (!Enabled)
         {
-            problems.Add("VITALWATCH_ENABLED=false — hiçbir veri gönderilmez.");
+            problems.Add("VITALWATCH_ENABLED=false — no data is sent.");
 
             return problems;
         }
@@ -67,26 +67,26 @@ internal sealed class Settings
 
         if (missing.Count > 0)
         {
-            problems.Add($"{string.Join(", ", missing)} tanımlı değil — izleme kurulmadı.");
+            problems.Add($"{string.Join(", ", missing)} not set — monitoring is not active.");
         }
 
         if (!string.IsNullOrEmpty(Secret) && Secret.Length != SecretLength)
         {
             problems.Add(
-                $"VITALWATCH_SECRET {SecretLength} karakter olmalı, {Secret.Length} karakter. Eksik kopyalanmış olabilir.");
+                $"VITALWATCH_SECRET must be {SecretLength} characters, got {Secret.Length}. It may have been copied incompletely.");
         }
 
         // Yerel geri döngü adresi hattan çıkmaz; yerel hub'la geliştirme uyarı üretmesin.
         if (Url is not null && Url.StartsWith("http://", StringComparison.OrdinalIgnoreCase) && !IsLoopback(Url))
         {
-            problems.Add("VITALWATCH_URL http:// ile başlıyor — secret imzası şifresiz hat üzerinden gider.");
+            problems.Add("VITALWATCH_URL starts with http:// — the secret signature travels over an unencrypted connection.");
         }
 
         if (!EnvironmentNames.IsAccepted(Env))
         {
             problems.Add(
-                $"Ortam \"{EnvRaw}\" hub tarafından kabul edilmez — olaylar ve canlılık sessizce reddedilir. " +
-                "VITALWATCH_ENV=production, staging ya da local yazın.");
+                $"Environment \"{EnvRaw}\" is not accepted by the hub — events and liveness requests are silently rejected. " +
+                "Set VITALWATCH_ENV to production, staging or local.");
         }
 
         return problems;
@@ -125,7 +125,7 @@ internal sealed class Settings
         configure?.Invoke(options);
         if (!string.Equals(releaseBefore, options.Release, StringComparison.Ordinal))
         {
-            releaseSource = "kod";
+            releaseSource = "code";
         }
 
         var envRaw = string.IsNullOrWhiteSpace(options.Env)

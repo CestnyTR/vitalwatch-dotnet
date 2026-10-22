@@ -12,9 +12,20 @@ aşağıdaki "Kardeşlerden ayrışan yerler" listesine yazılmalı.
 
 ## Dil
 
-Yorumlar ve dokümantasyon Türkçe; **sınıf, metot, özellik ve değişken adları İngilizce** —
-yerel değişkenler dahil. Kardeş paketlerle aynı kural. README ve public API'nin XML
-dokümantasyonu Türkçe.
+- **README, CHANGELOG ve paket açıklaması (`<Description>`, `<PackageTags>`) İngilizce.**
+  Paketler public, kitle uluslararası — 22 Ekim 2026 kararı. Yeni CHANGELOG girdileri de
+  İngilizce yazılır.
+- **Kullanıcının gördüğü her çıktı İngilizce**: `--vitalwatch-status` raporu, günlük
+  uyarıları (`VitalWatch` kategorisi), yapılandırma sorunu mesajları, kullanıcıya fırlatılan
+  istisnalar, SDK'nın ürettiği olay `msg` şablonları ve **public API'nin XML dokümantasyonu**
+  (`///` — nupkg ile IntelliSense'e gider). 22 Ekim 2026 kararı. Ortak etiketler kardeş
+  paketlerle aynı: "SDK version", "Latest version", "Hub URL", "Project key", "Secret length",
+  "Release tag", "(source: …)", "not set", "Configuration OK." …
+- **İç kod yorumları Türkçe** kalır: `//`, `/* */` ve internal/private üyelerin `///`
+  açıklamaları yalnızca bakımcı okur.
+- Üretilen olay mesajı değişirse hub'da parmak izi bir kez değişir — CHANGELOG'a yazılır.
+- **Sınıf, metot, özellik ve değişken adları İngilizce** — yerel değişkenler dahil.
+- Kardeş paketlerle aynı kural.
 
 ---
 
