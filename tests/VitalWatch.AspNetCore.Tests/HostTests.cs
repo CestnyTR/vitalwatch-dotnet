@@ -150,7 +150,7 @@ public sealed class HostTests : IAsyncLifetime
         Assert.True(request.Accepted);
         Assert.Equal(0, request.Body.GetProperty("events").GetArrayLength());
         Assert.Equal("dotnet", request.Body.GetProperty("runtime").GetString());
-        Assert.Equal("0.1.1", request.Body.GetProperty("sdk_version").GetString());
+        Assert.Equal("0.2.0", request.Body.GetProperty("sdk_version").GetString());
         Assert.Equal("production", request.Body.GetProperty("env").GetString());
         Assert.Equal($"/api/i/{FakeHub.Key}/server", "/api/i/" + request.Key + "/server");
         Assert.False(request.Headers.ContainsKey("traceparent"));

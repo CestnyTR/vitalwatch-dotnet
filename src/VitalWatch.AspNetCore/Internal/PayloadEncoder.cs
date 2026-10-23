@@ -21,7 +21,7 @@ internal static class PayloadEncoder
     public const int MaxBodyBytes = 8192;
     public const int MaxEvents = 8;
 
-    private static readonly JsonWriterOptions WriterOptions = new()
+    internal static readonly JsonWriterOptions WriterOptions = new()
     {
         // Türkçe karakterler \uXXXX yerine UTF-8 kalır: aynı metin 8 KB'a daha çok sığar.
         // Gövde HTML'e gömülmüyor; gevşek kaçış güvenli.
@@ -128,7 +128,7 @@ internal static class PayloadEncoder
         return stream.ToArray();
     }
 
-    private static void WriteIdentity(Utf8JsonWriter writer, Settings settings, bool includeEnv)
+    internal static void WriteIdentity(Utf8JsonWriter writer, Settings settings, bool includeEnv)
     {
         if (includeEnv)
         {

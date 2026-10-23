@@ -44,7 +44,8 @@ public static class VitalWatchStatusExtensions
     /// if (await app.RunVitalWatchStatusAsync(args)) return;
     /// </code>
     /// Extra flags: <c>--test</c> sends a real test exception; <c>--vitalwatch</c> sends only a
-    /// liveness request, without creating an error in the panel.
+    /// liveness request, without creating an error in the panel; <c>--deps</c> sends the
+    /// dependency list immediately.
     /// </example>
     public static async Task<bool> RunVitalWatchStatusAsync(this IHost host, string[] args, TextWriter? output = null)
     {
@@ -109,6 +110,10 @@ public static class VitalWatchStatusExtensions
             ? "not set (source: none)"
             : $"{settings.Release} (source: {settings.ReleaseSource})");
         Line(".NET", SdkInfo.RuntimeVersion);
+
+        var dependencies = services.GetService<DependencyReporter>();
+        var manifest = settings.Dependencies ? dependencies?.Read() : null;
+        Line("Dependencies", DescribeDependencies(settings, manifest));
         output.WriteLine();
 
         var problems = settings.Problems();
@@ -170,6 +175,41 @@ public static class VitalWatchStatusExtensions
             output.WriteLine($"  ✓ Liveness request sent (HTTP {result.Status}).");
         }
 
+        /*
+         * --deps: bağımlılık listesini hemen gönderir. --test göndermez — test olayı ile
+         * paket listesi ayrı şeyler; döngüde --test koşan biri listeyi her seferinde yollamasın.
+         */
+        if (args.Contains("--deps"))
+        {
+            if (!settings.Dependencies || dependencies is null)
+            {
+                output.WriteLine("  ✗ Dependency list could NOT be sent: disabled (VITALWATCH_DEPENDENCIES=false).");
+                output.WriteLine();
+
+                return 1;
+            }
+
+            if (manifest is not { Found: true })
+            {
+                output.WriteLine($"  ✗ Dependency list could NOT be sent: {DescribeDependencies(settings, manifest)}.");
+                output.WriteLine();
+
+                return 1;
+            }
+
+            var result = await dependencies.SendAsync(manifest).ConfigureAwait(false);
+
+            if (!result.Sent)
+            {
+                output.WriteLine($"  ✗ Dependency list could NOT be sent: {result.Error ?? $"HTTP {result.Status}"}");
+                output.WriteLine();
+
+                return 1;
+            }
+
+            output.WriteLine($"  ✓ Dependency list sent (HTTP {result.Status}, {manifest.Packages.Count} packages).");
+        }
+
         output.WriteLine();
         output.WriteLine("  Only the hub panel can confirm that data arrives:");
         output.WriteLine("  the project row should show the connection status \"Connected\".");
@@ -177,6 +217,22 @@ public static class VitalWatchStatusExtensions
         output.WriteLine();
 
         return 0;
+    }
+
+    /// <summary><c>MyApp.deps.json · 64 packages</c> / <c>disabled</c> / <c>deps.json not found</c>.</summary>
+    private static string DescribeDependencies(Settings settings, DependencyManifest? manifest)
+    {
+        if (!settings.Dependencies)
+        {
+            return "disabled";
+        }
+
+        return manifest?.State switch
+        {
+            ManifestState.Found => $"{manifest.FileName} · {manifest.Packages.Count} packages",
+            ManifestState.Unreadable => $"{manifest.FileName} could not be read",
+            _ => "deps.json not found",
+        };
     }
 
     private static bool IsTrue(string? value) =>

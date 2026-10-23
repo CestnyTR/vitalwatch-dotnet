@@ -153,7 +153,7 @@ Bilinçli; değiştirmeden önce sebebi okuyun.
 
 Bu ailenin tekrarlayan hatası **sessizce çalışmama**. Hub geçersiz isteğe de `204` döner.
 
-- `--vitalwatch-status [--test] [--vitalwatch]` — yereldeki yanlış yapılandırmayı gösterir;
+- `--vitalwatch-status [--test] [--vitalwatch] [--deps]` — yereldeki yanlış yapılandırmayı gösterir;
   `--test` sonucu okur, "gönderildi" varsaymaz.
 - Eksik/hatalı yapılandırmada başlangıçta **tek** uyarı (`VitalWatch` kategorisi).
 - Testler sahte hub'ın **kabul ettiğini** doğrular; "204 aldım" yeterli sayılmaz.

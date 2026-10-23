@@ -9,13 +9,17 @@ namespace VitalWatch.Internal;
 internal sealed class VitalWatchHostedService : IHostedService
 {
     private readonly Reporter _reporter;
+    private readonly DependencyReporter? _dependencies;
     private readonly ILogger _logger;
     private CancellationTokenSource? _heartbeatStop;
     private Task? _heartbeat;
 
-    public VitalWatchHostedService(Reporter reporter, ILoggerFactory loggerFactory)
+    public VitalWatchHostedService(Reporter reporter, ILoggerFactory loggerFactory, IServiceProvider services)
     {
         _reporter = reporter;
+
+        // Kayıt dışı kullanımda (eski kurulum, elle oluşturma) bağımlılık listesi yalnızca atlanır.
+        _dependencies = services.GetService(typeof(DependencyReporter)) as DependencyReporter;
         _logger = loggerFactory.CreateLogger("VitalWatch");
     }
 
@@ -51,6 +55,9 @@ internal sealed class VitalWatchHostedService : IHostedService
 
             DiagnosticsBridge.Register(_reporter);
             StartHeartbeat(settings.HeartbeatInterval);
+
+            // Bağımlılık listesi: ilk gönderim 60 sn sonra, kendi döngüsünde (Dependencies=false ise hiç).
+            _dependencies?.Start();
         }
         catch
         {
@@ -106,6 +113,7 @@ internal sealed class VitalWatchHostedService : IHostedService
         try
         {
             _heartbeatStop?.Cancel();
+            _dependencies?.Stop();
 
             // Kuyruktakiler gitsin; süre kısa ve sınırlı — kapanışı uzatmaz.
             await _reporter.FlushAsync(TimeSpan.FromMilliseconds(Math.Min(_reporter.Settings.TimeoutMs + 500, 3000)))

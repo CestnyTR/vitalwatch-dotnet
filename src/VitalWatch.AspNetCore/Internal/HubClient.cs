@@ -20,6 +20,7 @@ internal sealed class HubClient : IDisposable
     private readonly Settings _settings;
     private readonly HttpClient _http;
     private readonly Uri? _endpoint;
+    private readonly Uri? _depsEndpoint;
 
     public HubClient(Settings settings)
     {
@@ -46,10 +47,12 @@ internal sealed class HubClient : IDisposable
 
         if (settings.Configured)
         {
-            Uri.TryCreate(
-                $"{settings.Url!.TrimEnd('/')}/api/i/{Uri.EscapeDataString(settings.Key!)}/server",
-                UriKind.Absolute,
-                out _endpoint);
+            var root = $"{settings.Url!.TrimEnd('/')}/api/i/{Uri.EscapeDataString(settings.Key!)}/";
+
+            Uri.TryCreate(root + "server", UriKind.Absolute, out _endpoint);
+
+            // Bağımlılık listesi ayrı uca gider ama imza, başlıklar ve bağlantı havuzu aynı.
+            Uri.TryCreate(root + "deps", UriKind.Absolute, out _depsEndpoint);
         }
     }
 
@@ -61,9 +64,19 @@ internal sealed class HubClient : IDisposable
     /// geçersiz istekte de 204 döner — yani 204 "kabul edildi" DEĞİL, yalnızca "istek ulaştı"
     /// demek.
     /// </remarks>
-    public async Task<ReportResult> SendAsync(byte[] body, CancellationToken cancellationToken = default)
+    public Task<ReportResult> SendAsync(byte[] body, CancellationToken cancellationToken = default) =>
+        PostAsync(_endpoint, body, cancellationToken);
+
+    /// <summary>
+    /// Bağımlılık listesi: <c>/api/i/{key}/deps</c>. İmza <see cref="SendAsync"/> ile birebir
+    /// aynı (aynı kod yolu). Fırlatmaz.
+    /// </summary>
+    public Task<ReportResult> SendDependenciesAsync(byte[] body, CancellationToken cancellationToken = default) =>
+        PostAsync(_depsEndpoint, body, cancellationToken);
+
+    private async Task<ReportResult> PostAsync(Uri? endpoint, byte[] body, CancellationToken cancellationToken)
     {
-        if (_endpoint is null || !_settings.Configured)
+        if (endpoint is null || !_settings.Configured)
         {
             return ReportResult.Failed("missing-config");
         }
@@ -72,7 +85,7 @@ internal sealed class HubClient : IDisposable
         {
             var timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString(CultureInfo.InvariantCulture);
 
-            using var request = new HttpRequestMessage(HttpMethod.Post, _endpoint)
+            using var request = new HttpRequestMessage(HttpMethod.Post, endpoint)
             {
                 Content = new ByteArrayContent(body),
             };

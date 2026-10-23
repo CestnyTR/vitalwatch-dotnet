@@ -17,12 +17,12 @@
       `sdk_version` da derlenmiş derlemenin bilgi sürümünden okunur. "+sha" eki
       kapalı: hub alanı 32 karakterle kırpıyor ve panel sürümü olduğu gibi gösteriyor.
     -->
-    <Version>0.1.1</Version>
+    <Version>0.2.0</Version>
     <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
 
     <PackageId>VitalWatch.AspNetCore</PackageId>
     <Authors>CestnyTR</Authors>
-    <Description>ASP.NET Core reporter for VitalWatch Hub — unhandled exceptions, 5xx responses, slow requests, slow SQL queries (EF Core, SqlClient, Npgsql) and crashed background services. No runtime dependencies.</Description>
+    <Description>ASP.NET Core reporter for VitalWatch Hub — unhandled exceptions, 5xx responses, slow requests, slow SQL queries (EF Core, SqlClient, Npgsql) crashed background services and the resolved NuGet dependency list for vulnerability advisories. No runtime dependencies.</Description>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <RepositoryUrl>https://github.com/CestnyTR/vitalwatch-dotnet</RepositoryUrl>
     <RepositoryType>git</RepositoryType>

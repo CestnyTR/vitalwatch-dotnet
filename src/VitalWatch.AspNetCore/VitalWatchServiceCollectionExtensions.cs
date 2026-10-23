@@ -61,6 +61,11 @@ public static class VitalWatchServiceCollectionExtensions
 
         services.TryAddSingleton(sp => new Reporter(sp.GetRequiredService<Settings>()));
         services.TryAddSingleton<IVitalWatch>(sp => sp.GetRequiredService<Reporter>());
+        services.TryAddSingleton(sp => new DependencyReporter(
+            sp.GetRequiredService<Reporter>(),
+            DependencyManifest.DefaultPath(),
+            TimeProvider.System,
+            sp.GetService<ILoggerFactory>()?.CreateLogger("VitalWatch")));
         services.AddHostedService<VitalWatchHostedService>();
 
         services.TryAddEnumerable(ServiceDescriptor.Singleton<ILoggerProvider, VitalWatchLoggerProvider>(sp =>

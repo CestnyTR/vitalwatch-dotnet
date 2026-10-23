@@ -23,6 +23,7 @@ namespace VitalWatch.Tests;
 public sealed class FakeHub : IAsyncDisposable
 {
     public const int MaxBodyBytes = 8192;
+    public const int MaxDepsBodyBytes = 512 * 1024;
     public const int MaxEvents = 8;
     public const int MaxAgeSeconds = 300;
     public const string Key = "test-project";
@@ -46,7 +47,10 @@ public sealed class FakeHub : IAsyncDisposable
     /// <summary>Her isteğe eklenecek gecikme — yavaş hub benzetimi.</summary>
     public TimeSpan Delay { get; set; } = TimeSpan.Zero;
 
-    public IReadOnlyList<HubRequest> Requests => _requests.ToArray();
+    public IReadOnlyList<HubRequest> Requests => _requests.Where(r => r.Endpoint == "server").ToArray();
+
+    /// <summary><c>/deps</c> ucuna gelen istekler.</summary>
+    public IReadOnlyList<HubRequest> DepsRequests => _requests.Where(r => r.Endpoint == "deps").ToArray();
 
     /// <summary>Kabul edilen isteklerdeki bütün olaylar (hub'ın 8 olay kesmesi uygulanmış).</summary>
     public IReadOnlyList<JsonElement> Events =>
@@ -64,7 +68,8 @@ public sealed class FakeHub : IAsyncDisposable
         var app = builder.Build();
         var hub = new FakeHub(app, secret);
 
-        app.MapPost("/api/i/{key}/server", (Delegate)hub.HandleAsync);
+        app.MapPost("/api/i/{key}/server", (HttpContext context, string key) => hub.HandleAsync(context, key, "server", MaxBodyBytes));
+        app.MapPost("/api/i/{key}/deps", (HttpContext context, string key) => hub.HandleAsync(context, key, "deps", MaxDepsBodyBytes));
 
         await app.StartAsync();
 
@@ -74,7 +79,7 @@ public sealed class FakeHub : IAsyncDisposable
         return hub;
     }
 
-    private async Task<IResult> HandleAsync(HttpContext context, string key)
+    private async Task<IResult> HandleAsync(HttpContext context, string key, string endpoint, int maxBytes)
     {
         using var buffer = new MemoryStream();
         await context.Request.Body.CopyToAsync(buffer);
@@ -84,9 +89,10 @@ public sealed class FakeHub : IAsyncDisposable
             key,
             raw,
             Encoding.UTF8.GetString(raw),
-            Accepts(key, context.Request.Headers, raw),
+            Accepts(key, context.Request.Headers, raw, maxBytes),
             context.Request.Headers.ContentType.ToString(),
-            context.Request.Headers.ToDictionary(h => h.Key, h => h.Value.ToString()));
+            context.Request.Headers.ToDictionary(h => h.Key, h => h.Value.ToString()),
+            endpoint);
 
         _requests.Enqueue(request);
 
@@ -99,7 +105,7 @@ public sealed class FakeHub : IAsyncDisposable
         return Results.NoContent();
     }
 
-    private bool Accepts(string key, IHeaderDictionary headers, byte[] raw)
+    private bool Accepts(string key, IHeaderDictionary headers, byte[] raw, int maxBytes)
     {
         if (key != Key)
         {
@@ -119,7 +125,7 @@ public sealed class FakeHub : IAsyncDisposable
             return false;
         }
 
-        if (raw.Length == 0 || raw.Length > MaxBodyBytes)
+        if (raw.Length == 0 || raw.Length > maxBytes)
         {
             return false;
         }
@@ -162,7 +168,8 @@ public sealed record HubRequest(
     string Raw,
     bool Accepted,
     string ContentType,
-    IReadOnlyDictionary<string, string> Headers)
+    IReadOnlyDictionary<string, string> Headers,
+    string Endpoint = "server")
 {
     public JsonElement Body => JsonDocument.Parse(RawBytes).RootElement;
 

@@ -89,6 +89,7 @@ builder.Services.AddVitalWatch(o =>
 dotnet run -- --vitalwatch-status            # show the configuration
 dotnet run -- --vitalwatch-status --test     # send a real test error
 dotnet run -- --vitalwatch-status --vitalwatch   # liveness request without creating an error in the panel
+dotnet run -- --vitalwatch-status --deps     # send the dependency list now
 # in a published app:
 dotnet MyApp.dll --vitalwatch-status --test
 ```
@@ -96,8 +97,8 @@ dotnet MyApp.dll --vitalwatch-status --test
 Sample output:
 
 ```
-  SDK version        0.1.1
-  Latest version     0.1.1
+  SDK version        0.2.0
+  Latest version     0.2.0
   Enabled            yes
   Hub URL            https://vitalwatch.example.com
   Project key        project-key
@@ -105,6 +106,7 @@ Sample output:
   Environment        production
   Release tag        a1b2c3d4e5f6 (source: .git)
   .NET               10.0.12
+  Dependencies       MyApp.deps.json · 64 packages
 
   ✓ Configuration OK.
   ✓ Test event sent (HTTP 204).
@@ -291,6 +293,48 @@ looked like a "broken installation". The interval is a third of the hub's 24-hou
 threshold: even if two rounds are missed, no alert fires. `HeartbeatInterval =
 TimeSpan.Zero` turns it off.
 
+## Dependency advisories
+
+The package sends the application's **resolved NuGet package list** to the hub, which checks
+it against [OSV.dev](https://osv.dev) and alerts per project when a package you run has a
+known vulnerability.
+
+- **Source:** `{EntryAssembly}.deps.json` next to the application
+  (`AppContext.BaseDirectory`), written by `dotnet build` / `dotnet publish`. Only
+  `"type": "package"` libraries are taken; your own projects (`project`) and plain DLL
+  references (`reference`) are skipped. Duplicates are removed, at most 5000 packages.
+- **Only name and version** are sent — no paths, hashes, licenses or package sources:
+
+  ```json
+  {
+    "env": "production", "source": "server", "release": "a1b2c3d4e5f6",
+    "runtime": "dotnet", "runtime_version": "10.0.12", "sdk_version": "0.2.0",
+    "dependencies": {
+      "v": 1,
+      "ecosystem": "NuGet",
+      "manifest": "MyApp.deps.json",
+      "hash": "<sha256 of the sorted list>",
+      "packages": [{ "name": "MailKit", "version": "4.17.0" }]
+    }
+  }
+  ```
+
+- **When:** about 60 seconds after startup, then once every 24 hours. The file is re-checked
+  every hour; if the list changed (different hash) it is sent at the next check. A failed send
+  is retried at the next check. All of this runs in the background task — it never touches a
+  request and is cancelled on shutdown.
+- **Endpoint:** `POST {URL}/api/i/{KEY}/deps`, signed exactly like the event endpoint.
+- **Size guard:** if the body would exceed 500 KB nothing is sent and a single warning is
+  logged in the `VitalWatch` category.
+- **Not available with single-file publish** (`PublishSingleFile`): `deps.json` is embedded in
+  the executable, so nothing is sent; `--vitalwatch-status` shows `deps.json not found`.
+- **Turn it off** with `VITALWATCH_DEPENDENCIES=false` (or `VitalWatch:Dependencies`,
+  or `o.Dependencies = false` in code). `VITALWATCH_ENABLED=false` turns it off as well.
+
+`--vitalwatch-status` shows a `Dependencies` line (`MyApp.deps.json · 64 packages`,
+`disabled` or `deps.json not found`); `--vitalwatch-status --deps` sends the list immediately
+and prints the HTTP status. `--test` does not send the list.
+
 ---
 
 ## Configuration reference
@@ -306,6 +350,7 @@ TimeSpan.Zero` turns it off.
 | `VITALWATCH_TIMEOUT` | `Timeout` | `2000` | Send timeout. **Values of 100 and above are milliseconds, below that seconds** (`2` → 2000 ms). Clamped to 100–10000 ms; invalid, zero or negative values become 2000. Same rule in every package |
 | `VITALWATCH_SLOW_REQUEST_MS` | `SlowRequestMs` | `1000` | Requests longer than this are considered slow |
 | `VITALWATCH_SLOW_QUERY_MS` | `SlowQueryMs` | `500` | SQL commands longer than this are considered slow |
+| `VITALWATCH_DEPENDENCIES` | `Dependencies` | `true` | Send the resolved NuGet package list for [dependency advisories](#dependency-advisories). `false` (or `0`/`no`/`off`) turns it off |
 | — | — | — | Code only: `Ignore` (exception types to ignore, including subclasses), `HeartbeatInterval` |
 
 ### Release tag
@@ -349,6 +394,7 @@ To disable temporarily: set `VITALWATCH_ENABLED=false` and restart the applicati
 ```bash
 dotnet test                      # net8.0 + net10.0
 dotnet test -f net10.0           # if only the .NET 10 runtime is installed
+DOTNET_ROLL_FORWARD=Major dotnet test -f net8.0   # net8.0 build on the .NET 10 runtime
 dotnet pack src/VitalWatch.AspNetCore -c Release -o artifacts
 ```
 

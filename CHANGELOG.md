@@ -9,6 +9,28 @@ dotnet run -- --vitalwatch-status
 
 ---
 
+## 0.2.0
+
+### Added
+
+- **Dependency advisories.** The resolved NuGet package list (name and version only, from
+  `{EntryAssembly}.deps.json`, `"type": "package"` entries, deduplicated, at most 5000) is
+  sent to the new hub endpoint `POST {URL}/api/i/{KEY}/deps`, signed like the event
+  endpoint. The hub checks it against OSV.dev and alerts per project. Sent ~60 s after
+  startup, then every 24 hours, and at the next hourly check when the list's hash changes.
+  Bodies over 500 KB are not sent (one warning is logged). Nothing is sent when `deps.json`
+  is missing (e.g. single-file publish).
+- Option `Dependencies` (`VITALWATCH_DEPENDENCIES`, `VitalWatch:Dependencies`), default
+  `true`, same precedence rules as the other options.
+- `--vitalwatch-status` shows a `Dependencies` line; `--vitalwatch-status --deps` sends the
+  list immediately and prints the HTTP status. `--test` does not send it.
+
+### Changed
+
+- `sdk_version` is now `0.2.0`. No change to the event endpoint, event messages or
+  fingerprints. Requires a hub with the `/deps` endpoint; an older hub answers 404, the list
+  is dropped and retried at the next hourly check — nothing else is affected.
+
 ## 0.1.1
 
 ### Changed

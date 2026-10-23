@@ -79,6 +79,9 @@ internal sealed class Reporter : IVitalWatch, IDisposable, IAsyncDisposable
 
     public Settings Settings { get; }
 
+    /// <summary>Paylaşılan imzalı istemci — bağımlılık listesi de aynı bağlantı havuzundan gider.</summary>
+    internal HubClient Client => _client;
+
     /// <summary>Etkin ve yapılandırılmış.</summary>
     public bool Active => Settings.Active && Volatile.Read(ref _disposed) == 0;
 

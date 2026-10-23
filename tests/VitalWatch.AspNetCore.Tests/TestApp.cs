@@ -47,6 +47,7 @@ internal static class TestApp
         {
             // Testlerde canlılık isteği gürültü olur; ayrı testte açılıyor.
             o.HeartbeatInterval = TimeSpan.Zero;
+            o.Dependencies = false;
             options?.Invoke(o);
         });
 

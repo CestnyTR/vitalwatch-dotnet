@@ -153,4 +153,39 @@ public class SettingsTests
     {
         Assert.Equal(expected, Settings.ToEnvName(property));
     }
+
+    [Fact]
+    public void Dependencies_default_on()
+    {
+        Assert.True(Resolve().Dependencies);
+        Assert.Equal("DEPENDENCIES", Settings.ToEnvName(nameof(VitalWatchOptions.Dependencies)));
+    }
+
+    [Theory]
+    [InlineData("false", false)]
+    [InlineData("0", false)]
+    [InlineData("off", false)]
+    [InlineData("no", false)]
+    [InlineData("true", true)]
+    [InlineData("", true)] // boş = verilmemiş
+    public void Dependencies_flag_from_environment(string value, bool expected)
+    {
+        Assert.Equal(expected, Resolve(env: Env(("VITALWATCH_DEPENDENCIES", value))).Dependencies);
+    }
+
+    [Fact]
+    public void Dependencies_precedence_appsettings_then_environment_then_code()
+    {
+        Assert.False(Resolve(Config(("VitalWatch:Dependencies", "false"))).Dependencies);
+
+        // Ortam dosyayı yener — iki yönde de.
+        Assert.True(Resolve(Config(("VitalWatch:Dependencies", "false")), Env(("VITALWATCH_DEPENDENCIES", "true"))).Dependencies);
+        Assert.False(Resolve(Config(("VitalWatch:Dependencies", "true")), Env(("VITALWATCH_DEPENDENCIES", "false"))).Dependencies);
+
+        // Kod her şeyi yener.
+        Assert.True(Resolve(
+            Config(("VitalWatch:Dependencies", "false")),
+            Env(("VITALWATCH_DEPENDENCIES", "false")),
+            configure: o => o.Dependencies = true).Dependencies);
+    }
 }

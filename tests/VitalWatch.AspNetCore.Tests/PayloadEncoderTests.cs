@@ -115,7 +115,7 @@ public class PayloadEncoderTests
 
         Assert.Equal("dotnet", root.GetProperty("runtime").GetString());
         Assert.Equal(Environment.Version.ToString(), root.GetProperty("runtime_version").GetString());
-        Assert.Equal("0.1.1", root.GetProperty("sdk_version").GetString());
+        Assert.Equal("0.2.0", root.GetProperty("sdk_version").GetString());
         Assert.Equal("production", root.GetProperty("env").GetString());
         Assert.Equal("server", root.GetProperty("source").GetString());
         Assert.Equal("abc123def456", root.GetProperty("release").GetString());
@@ -124,7 +124,7 @@ public class PayloadEncoderTests
         var e = root.GetProperty("events")[0];
         Assert.Equal("abc123def456", e.GetProperty("release").GetString());
         Assert.Equal("dotnet", e.GetProperty("runtime").GetString());
-        Assert.Equal("0.1.1", e.GetProperty("sdk_version").GetString());
+        Assert.Equal("0.2.0", e.GetProperty("sdk_version").GetString());
     }
 
     [Fact]

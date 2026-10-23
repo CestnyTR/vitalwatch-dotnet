@@ -33,6 +33,9 @@ internal sealed class Settings
     public IReadOnlyList<Type> Ignore { get; init; } = [];
     public TimeSpan HeartbeatInterval { get; init; } = TimeSpan.FromHours(8);
 
+    /// <summary>Çözümlenmiş bağımlılık listesi hub'a gönderilsin mi (<c>VITALWATCH_DEPENDENCIES</c>).</summary>
+    public bool Dependencies { get; init; } = true;
+
     /// <summary>URL, anahtar ve secret dolu mu.</summary>
     public bool Configured =>
         !string.IsNullOrWhiteSpace(Url) && !string.IsNullOrWhiteSpace(Key) && !string.IsNullOrWhiteSpace(Secret);
@@ -149,6 +152,7 @@ internal sealed class Settings
             SlowQueryMs = Math.Max(0, options.SlowQueryMs),
             Ignore = options.Ignore.Where(t => t is not null).ToArray(),
             HeartbeatInterval = options.HeartbeatInterval < TimeSpan.Zero ? TimeSpan.Zero : options.HeartbeatInterval,
+            Dependencies = options.Dependencies,
         };
     }
 
@@ -158,6 +162,13 @@ internal sealed class Settings
         if (enabled is not null)
         {
             options.Enabled = !IsFalse(enabled);
+        }
+
+        // Enabled ile aynı kural: kapatma değerleri false, geri kalan her dolu değer true.
+        var dependencies = Clean(read(nameof(VitalWatchOptions.Dependencies)));
+        if (dependencies is not null)
+        {
+            options.Dependencies = !IsFalse(dependencies);
         }
 
         options.Url = Clean(read(nameof(VitalWatchOptions.Url))) ?? options.Url;

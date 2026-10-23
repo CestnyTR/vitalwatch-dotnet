@@ -68,4 +68,12 @@ public sealed class VitalWatchOptions
     /// threshold. <see cref="TimeSpan.Zero"/> disables the liveness request.
     /// </summary>
     public TimeSpan HeartbeatInterval { get; set; } = TimeSpan.FromHours(8);
+
+    /// <summary>
+    /// When <c>true</c>, the application's resolved NuGet package list (name and version only,
+    /// read from <c>{EntryAssembly}.deps.json</c>) is sent to the hub once a day so that it can
+    /// check it against known vulnerability advisories (<c>VITALWATCH_DEPENDENCIES</c>).
+    /// Default <c>true</c>. <c>false</c> (or <c>0</c>/<c>no</c>/<c>off</c>) turns it off.
+    /// </summary>
+    public bool Dependencies { get; set; } = true;
 }
